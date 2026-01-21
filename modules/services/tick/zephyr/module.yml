@@ -1,0 +1,4 @@
+name: tick_service
+build:
+  cmake: .
+  kconfig: Kconfig

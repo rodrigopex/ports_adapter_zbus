@@ -1,0 +1,8 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 9bb87dca1a94a0a22826d5ba5db51ef496587187
+_src_path: /private/var/folders/7p/kq441j5s40sdgvs15hhln8400000gn/T/copier._vcs.clone.vt4njx0w
+service_name: Battery
+service_description: Battery Service Module
+include_blink_example: None
+author_name: Rodrigo Peixoto
+year: 2026

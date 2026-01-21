@@ -1,0 +1,25 @@
+config ADAPTERS
+    bool "Service adapters"
+    default y
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      tbd
+
+if(ADAPTERS)
+
+config TICK_TO_UI_ADAPTER
+    bool "From tick to ui service adapter"
+    default y
+    depends on TICK_SERVICE && UI_SERVICE
+
+config DEBUG_ADAPTER
+    bool "From any to main service adapter"
+    default y
+    depends on TICK_SERVICE && TAMPER_DETECTION_SERVICE
+
+module = ADAPTERS
+module-str = adapter
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

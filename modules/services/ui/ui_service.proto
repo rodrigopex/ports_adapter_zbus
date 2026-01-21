@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+
+option (nanopb_fileopt).anonymous_oneof = true;
+
+message MsgUIService {
+    message Empty {}
+
+    message Invoke {
+        oneof ui_invoke {
+            Empty blink = 1;
+        }
+    }
+
+    message Report {
+        oneof ui_report {
+            Empty error_code = 1;
+        }
+    }
+}

@@ -1,0 +1,16 @@
+config BATTERY_SERVICE
+    bool "Battery Service Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the Battery Service Module in the build.
+      Battery Service Module.
+
+if(BATTERY_SERVICE)
+
+module = BATTERY_SERVICE
+module-str = battery_service
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

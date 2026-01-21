@@ -1,0 +1,3 @@
+name: shared_service
+build:
+  cmake: .

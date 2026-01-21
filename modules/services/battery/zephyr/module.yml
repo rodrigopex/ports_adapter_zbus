@@ -1,0 +1,4 @@
+name: battery_service
+build:
+  cmake: .
+  kconfig: Kconfig

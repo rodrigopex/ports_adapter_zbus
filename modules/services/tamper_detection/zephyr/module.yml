@@ -1,0 +1,4 @@
+name: tamper_detection_service
+build:
+  cmake: .
+  kconfig: Kconfig

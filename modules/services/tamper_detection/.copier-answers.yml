@@ -1,0 +1,8 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 39fa900f3588a941b0ece50606eebca819e62269
+_src_path: /private/var/folders/7p/kq441j5s40sdgvs15hhln8400000gn/T/copier._vcs.clone.hcgcdavf
+service_name: Tamper Detection
+service_description: Tamper Detection Service Module
+include_blink_example: None
+author_name: Rodrigo Peixoto
+year: 2026
