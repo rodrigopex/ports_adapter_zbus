@@ -9,15 +9,15 @@ message MsgTamperDetectionService {
     message Invoke {
         oneof tamper_detection_invoke {
 
-            MsgService.Empty start = 1;
-            MsgService.Empty stop = 2;
+            MsgVoid start = 1;
+            MsgVoid stop = 2;
 
         }
     }
 
     message Report {
         oneof tamper_detection_report {
-            MsgService.Status status = 1;
+            MsgStatus status = 1;
         }
     }
 }

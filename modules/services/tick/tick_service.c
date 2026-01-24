@@ -11,7 +11,7 @@ LOG_MODULE_REGISTER(tick_service, CONFIG_TICK_SERVICE_LOG_LEVEL);
 #define ALLOCA_MSG_TICK_SERVICE_REPORT_STATUS(_is_running)                     \
   &(struct msg_tick_service_report) {                                          \
     .which_tick_report = MSG_TICK_SERVICE_REPORT_STATUS_TAG,                   \
-    .status = (struct msg_service_status) {                                    \
+    .status = (struct msg_status) {                                            \
       .is_running = _is_running                                                \
     }                                                                          \
   }

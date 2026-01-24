@@ -1,24 +1,23 @@
 syntax = "proto3";
 
 import "nanopb.proto";
+import "service.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
 message MsgBatteryService {
-    message Empty {}
-
     message Invoke {
         oneof battery_invoke {
 
-            Empty start = 1;
-            Empty stop = 2;
+            MsgVoid start = 1;
+            MsgVoid stop = 2;
 
         }
     }
 
     message Report {
         oneof battery_report {
-            Empty error_code = 1;
+            MsgStatus status = 1;
         }
     }
 }

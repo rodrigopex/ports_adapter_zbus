@@ -4,10 +4,10 @@ import "nanopb.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgService {
-    message Empty {}
+message _ {}
 
-    message Status {
-        bool is_running = 1;
-    }
+message MsgVoid {}
+
+message MsgStatus {
+  bool is_running = 1;
 }

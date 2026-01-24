@@ -6,28 +6,24 @@ import "service.proto";
 option (nanopb_fileopt).anonymous_oneof = true;
 
 message MsgTickService {
-    message Empty {}
+  message Config {
+    /* In milliseconds */
+    optional bool should_report = 1;
+    uint32 delay_ms = 2;
+  }
 
-    message Status {
-      bool is_running = 1;
+  message Invoke {
+    oneof tick_invoke {
+      MsgVoid start = 1;
+      MsgVoid stop = 2;
+      Config config = 3;
     }
+  }
 
-    message Config {
-      /* In milliseconds */
-      uint32 delay_ms = 1;
+  message Report {
+    oneof tick_report {
+      MsgStatus status = 1;
+      MsgVoid tick = 2;
     }
-
-    message Invoke {
-        oneof tick_invoke {
-            Config start = 2;
-            Empty stop = 3;
-        }
-    }
-
-    message Report {
-        oneof tick_report {
-            MsgService.Status status = 1;
-            Empty tick = 2;
-        }
-    }
+  }
 }

@@ -1,6 +1,6 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 9bb87dca1a94a0a22826d5ba5db51ef496587187
-_src_path: /private/var/folders/7p/kq441j5s40sdgvs15hhln8400000gn/T/copier._vcs.clone.vt4njx0w
+_commit: 5e9a3a845e0eb9d296ffba58f401d0d423306b62
+_src_path: /private/var/folders/7p/kq441j5s40sdgvs15hhln8400000gn/T/copier._vcs.clone.wn44yg3a
 service_name: Battery
 service_description: Battery Service Module
 include_blink_example: None

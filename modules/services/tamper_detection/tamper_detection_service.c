@@ -11,7 +11,7 @@ LOG_MODULE_REGISTER(tamper_detection_service, CONFIG_TAMPER_DETECTION_SERVICE_LO
 #define ALLOCA_MSG_TAMPER_DETECTION_SERVICE_REPORT_STATUS(_is_running)         \
   &(struct msg_tamper_detection_service_report) {                                  \
     .which_tamper_detection_report = MSG_TAMPER_DETECTION_SERVICE_REPORT_STATUS_TAG,    \
-    .status = (struct msg_service_status) {                               \
+    .status = (struct msg_status) {                               \
       .is_running = _is_running                                                          \
     }                                                                          \
   }
