@@ -14,16 +14,16 @@ message MsgTickService {
 
   message Invoke {
     oneof tick_invoke {
-      MsgVoid start = 1;
-      MsgVoid stop = 2;
+      Void start = 1;
+      Void stop = 2;
       Config config = 3;
     }
   }
 
   message Report {
     oneof tick_report {
-      MsgStatus status = 1;
-      MsgVoid tick = 2;
+      MsgServiceStatus status = 1;
+      Void tick = 2;
     }
   }
 }

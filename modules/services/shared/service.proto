@@ -6,8 +6,8 @@ option (nanopb_fileopt).anonymous_oneof = true;
 
 message _ {}
 
-message MsgVoid {}
+message Void {}
 
-message MsgStatus {
+message MsgServiceStatus {
   bool is_running = 1;
 }

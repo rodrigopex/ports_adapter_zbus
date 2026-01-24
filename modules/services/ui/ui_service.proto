@@ -8,13 +8,13 @@ option (nanopb_fileopt).anonymous_oneof = true;
 message MsgUIService {
   message Invoke {
     oneof ui_invoke {
-      MsgVoid blink = 1;
+      Void blink = 1;
     }
   }
 
   message Report {
     oneof ui_report {
-      MsgVoid error_code = 1;
+      Void error_code = 1;
     }
   }
 }
