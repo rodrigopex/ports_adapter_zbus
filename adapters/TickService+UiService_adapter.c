@@ -14,9 +14,12 @@ static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
 	case MSG_TICK_SERVICE_REPORT_STATUS_TAG:
 		LOG_DBG("Discarded reported status");
 		break;
-	case MSG_TICK_SERVICE_REPORT_TICK_TAG:
-		LOG_DBG("Received Tick Service report, invoking UI Service blink");
-		ui_service_blink(K_NO_WAIT);
+	case MSG_TICK_SERVICE_REPORT_EVENTS_TAG:
+		if (tick_report->events.has_tick) {
+			LOG_DBG("Received Tick Service report at %lld, invoking UI Service blink",
+				tick_report->events.tick);
+			ui_service_blink(K_NO_WAIT);
+		}
 		break;
 	}
 }

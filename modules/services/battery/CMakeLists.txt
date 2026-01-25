@@ -20,7 +20,7 @@ if(CONFIG_BATTERY_SERVICE)
 
     zephyr_library()
 
-    zephyr_library_sources(battery_service.c)
+    zephyr_library_sources(battery_service.c battery_service_impl.c)
 
     zephyr_library_link_libraries(battery_service)
 

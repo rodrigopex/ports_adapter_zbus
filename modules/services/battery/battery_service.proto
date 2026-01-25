@@ -17,7 +17,7 @@ message MsgBatteryService {
       bool is_charging = 3;
     }
 
-    message BatteryLowEvent {
+    message Events {
       int32 timestamp = 1;
     }
 
@@ -30,13 +30,13 @@ message MsgBatteryService {
             Config config = 4;
             Empty get_config = 5;
             Empty get_battery_state = 6;
-            Events get_events = 7;
+            Empty get_events = 7;
 
         }
     }
 
     message Report {
-        oneof Msgbattery_report {
+        oneof battery_report {
             MsgServiceStatus status = 1;
             Config config = 2;
             BatteryState battery_state = 3;
@@ -48,10 +48,10 @@ message MsgBatteryService {
 service BatteryService {
   rpc start (Empty) returns (MsgServiceStatus);
   rpc stop (Empty) returns (MsgServiceStatus);
-  rpc get_status (Empty) return (MsgServiceStatus);
+  rpc get_status (Empty) returns (MsgServiceStatus);
   rpc config (MsgBatteryService.Config) returns (MsgBatteryService.Config);
   rpc get_config (Empty) returns (MsgBatteryService.Config);
   rpc get_battery_state (Empty) returns (MsgBatteryService.BatteryState);
   /* This will report the battery events. No need an invokable API */
-  rpc events (Empty) returns (stream MsgBatteryService.Event);
+  rpc get_events (Empty) returns (stream MsgBatteryService.Events);
 }

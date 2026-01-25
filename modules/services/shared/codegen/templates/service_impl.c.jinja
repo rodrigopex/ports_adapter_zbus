@@ -201,7 +201,7 @@ int {{ service_name }}_init_fn(const struct service *self)
 {
 	int err = {{ service_name }}_set_implementation(self);
 
-	printk("   -> %s initialed with%s error\n", self->name, err == 0 ? " no" : "");
+	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 
 	return err;
 }

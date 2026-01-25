@@ -7,7 +7,7 @@ int services_init_fn(void)
 	printk("Init services!\n");
 
 	STRUCT_SECTION_FOREACH(service, instance) {
-		printk("%p: %s initialing\n", instance, instance->name);
+		printk("%p: %s initialing...\n", instance, instance->name);
 		if (instance->init_fn != NULL) {
 			instance->init_fn(instance);
 		}
