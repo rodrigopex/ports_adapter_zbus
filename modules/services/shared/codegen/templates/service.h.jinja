@@ -1,0 +1,63 @@
+/* GENERATED FILE - DO NOT EDIT */
+/* Generated from {{ service_name }}.proto */
+
+#ifndef _{{ service_name_upper }}_H_
+#define _{{ service_name_upper }}_H_
+
+#include "service.h"
+#include "{{ service_name }}/{{ service_name }}.pb.h"
+#include <zephyr/zbus/zbus.h>
+
+ZBUS_CHAN_DECLARE(chan_{{ service_name }}_invoke, chan_{{ service_name }}_report);
+
+struct {{ service_name }}_data {
+	struct k_spinlock lock;
+{%- if has_config %}
+	{{ config_type }} config;
+{%- endif %}
+	msg_service_status status;
+};
+
+struct {{ service_name }}_api {
+{%- for field in invoke_fields %}
+{%- if field.is_empty %}
+	int (*{{ field.name }})(const struct service *service);
+{%- else %}
+	int (*{{ field.name }})(const struct service *service,
+	                        const msg_{{ service_name }}_{{ field.message_type|lower }} *{{ field.message_type|lower }});
+{%- endif %}
+{%- endfor %}
+};
+
+{%- for field in invoke_fields %}
+{%- if field.is_empty %}
+
+static inline int {{ service_name }}_{{ field.name }}(k_timeout_t timeout)
+{
+	return zbus_chan_pub(&chan_{{ service_name }}_invoke,
+	                     &(msg_{{ service_name }}_invoke){
+	                             .which_{{ service_name }}_invoke = MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG},
+	                     timeout);
+}
+{%- else %}
+{%- if field.message_type|lower == 'config' and config_fields %}
+
+static inline int {{ service_name }}_{{ field.name }}_set({% for cfg in config_fields %}{{ cfg.type }} {{ cfg.name }}{{ ", " if not loop.last else "" }}{% endfor %}, k_timeout_t timeout)
+{
+	return zbus_chan_pub(&chan_{{ service_name }}_invoke,
+	                     &(msg_{{ service_name }}_invoke){
+	                             .which_{{ service_name }}_invoke = MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG,
+	                             .config = {
+{%- for cfg in config_fields %}
+	                                     .{{ cfg.name }} = {{ cfg.name }},
+{%- endfor %}
+	                             }},
+	                     timeout);
+}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+
+int {{ service_name }}_set_implementation(const struct service *implementation);
+
+#endif /* _{{ service_name_upper }}_H_ */

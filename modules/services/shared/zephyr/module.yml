@@ -1,3 +1,4 @@
 name: shared_service
 build:
   cmake: .
+  kconfig: Kconfig

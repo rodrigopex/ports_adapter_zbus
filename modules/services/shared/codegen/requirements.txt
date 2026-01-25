@@ -1,0 +1,3 @@
+# Requirements for Service Code Generator
+proto-schema-parser>=0.3.0
+jinja2>=3.0.0
