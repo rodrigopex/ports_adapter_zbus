@@ -1,16 +1,10 @@
 /* GENERATED FILE - DO NOT EDIT */
 /* Generated from tick_service.proto */
 
-#include "service.pb.h"
 #include "tick_service.h"
-#include "tick/tick_service.pb.h"
-#include "zephyr/init.h"
-#include "zephyr/spinlock.h"
-#include "zephyr/sys/check.h"
-#include "zephyr/zbus/zbus.h"
+#include <zephyr/zbus/zbus.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <sys/errno.h>
 
 LOG_MODULE_REGISTER(tick_service, CONFIG_TICK_SERVICE_LOG_LEVEL);
 
@@ -78,6 +72,11 @@ static void api_handler(const struct zbus_channel *chan)
 	case MSG_TICK_SERVICE_INVOKE_GET_CONFIG_TAG:
 		if (api->get_config) {
 			api->get_config(impl);
+		}
+		break;
+	case MSG_TICK_SERVICE_INVOKE_GET_EVENTS_TAG:
+		if (api->get_events) {
+			api->get_events(impl);
 		}
 		break;
 	}

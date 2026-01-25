@@ -3,17 +3,19 @@
 
 #include "{{ service_name }}.h"
 
+#include "private/{{ service_name }}_priv.h"
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE({{ service_name }}, CONFIG_{{ service_name_upper }}_LOG_LEVEL);
 
-/* TODO: Add helper macros for report messages (optional) */
-
 /* TODO: Add service-specific resources (timers, work queues, threads) */
 
-{%- for field in invoke_fields %}
+{%- if rpc_methods %}
+{%- for method in rpc_methods %}
 
-{%- if field.name == 'start' %}
+{%- if method.report_field_name == 'status' %}
+{%- if method.name == 'start' %}
 static int start(const struct service *service)
 {
 	struct {{ service_name }}_data *data = service->data;
@@ -26,14 +28,9 @@ static int start(const struct service *service)
 
 	/* TODO: Start service resources (timers, threads, etc.) */
 
-	return zbus_chan_pub(
-		&chan_{{ service_name }}_report,
-		&(struct msg_{{ service_name }}_report){
-			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG,
-			.status = status},
-		K_MSEC(200));
+	return {{ service_name }}_report_status(&status, K_MSEC(250));
 }
-{%- elif field.name == 'stop' %}
+{%- elif method.name == 'stop' %}
 
 static int stop(const struct service *service)
 {
@@ -54,14 +51,9 @@ static int stop(const struct service *service)
 		data->status.is_running = false;
 	}
 
-	return zbus_chan_pub(
-		&chan_{{ service_name }}_report,
-		&(struct msg_{{ service_name }}_report){
-			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG,
-			.status = status},
-		K_MSEC(200));
+	return {{ service_name }}_report_status(&status, K_MSEC(250));
 }
-{%- elif field.name == 'get_status' %}
+{%- elif method.name == 'get_status' %}
 
 static int get_status(const struct service *service)
 {
@@ -72,60 +64,105 @@ static int get_status(const struct service *service)
 		status = data->status;
 	}
 
-	return zbus_chan_pub(
-		&chan_{{ service_name }}_report,
-		&(struct msg_{{ service_name }}_report){
-			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG,
-			.status = status},
-		K_MSEC(200));
+	return {{ service_name }}_report_status(&status, K_MSEC(250));
 }
-{%- elif field.name == 'get_config' %}
+{%- else %}
+
+/* RPC returns {{ method.output_type }} (status) */
+static int {{ method.name }}(const struct service *service
+{%- if method.input_type != 'Empty' -%}
+, const struct msg_{{ service_name }}_{{ method.input_type|camel_to_snake }} *{{ method.input_type|camel_to_snake }}
+{%- endif -%})
+{
+	struct {{ service_name }}_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		/* TODO: Implement {{ method.name }} logic */
+		status = data->status;
+	}
+
+	return {{ service_name }}_report_status(&status, K_MSEC(250));
+}
+{%- endif %}
+{%- elif method.report_field_name == 'config' %}
+{%- if method.name == 'config' %}
+
+static int config(const struct service *service, const struct msg_{{ service_name }}_config *config)
+{
+	struct {{ service_name }}_data *data = service->data;
+
+	K_SPINLOCK(&data->lock) {
+		data->config = *config;
+	}
+
+	/* TODO: Apply configuration changes to service resources */
+
+	return {{ service_name }}_report_config(config, K_MSEC(250));
+}
+{%- elif method.name == 'get_config' %}
 
 static int get_config(const struct service *service)
 {
 	struct {{ service_name }}_data *data = service->data;
-{%- if has_config %}
 	struct msg_{{ service_name }}_config config;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
-	return zbus_chan_pub(
-		&chan_{{ service_name }}_report,
-		&(struct msg_{{ service_name }}_report){
-			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_CONFIG_TAG,
-			.config = config},
-		K_MSEC(200));
-{%- else %}
-	int ret = 0;
-
-	/* TODO: Implement if service has configuration */
-
-	return ret;
-{%- endif %}
+	return {{ service_name }}_report_config(&config, K_MSEC(250));
 }
-{%- elif field.name == 'config' %}
+{%- else %}
 
-static int config(const struct service *service, const struct msg_{{ service_name }}_config *new_config)
+/* RPC returns {{ method.output_type }} (config) */
+static int {{ method.name }}(const struct service *service
+{%- if method.input_type != 'Empty' -%}
+, const struct msg_{{ service_name }}_{{ method.input_type|camel_to_snake }} *{{ method.input_type|camel_to_snake }}
+{%- endif -%})
+{
+	struct {{ service_name }}_data *data = service->data;
+	struct msg_{{ service_name }}_config config;
+
+	K_SPINLOCK(&data->lock) {
+		/* TODO: Implement {{ method.name }} logic */
+		config = data->config;
+	}
+
+	return {{ service_name }}_report_config(&config, K_MSEC(250));
+}
+{%- endif %}
+{%- else %}
+
+/* RPC returns {{ method.output_type }} - publish to report field: {{ method.report_field_name }} */
+static int {{ method.name }}(const struct service *service
+{%- if method.input_type != 'Empty' -%}
+, const struct msg_{{ service_name }}_{{ method.input_type|camel_to_snake }} *{{ method.input_type|camel_to_snake }}
+{%- endif -%})
 {
 	struct {{ service_name }}_data *data = service->data;
 
 	K_SPINLOCK(&data->lock) {
-		data->config = *new_config;
+		/* TODO: Implement {{ method.name }} logic */
 	}
 
-	return zbus_chan_pub(
-		&chan_{{ service_name }}_report,
-		&(struct msg_{{ service_name }}_report){
-			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_CONFIG_TAG,
-			.config = *new_config},
-		K_MSEC(200));
-}
+{%- if method.is_streaming %}
+	/* Streaming RPC - publish events as they occur */
+	/* Example: return {{ service_name }}_report_{{ method.report_field_name }}(event_data, K_NO_WAIT); */
+	return 0;
 {%- else %}
+	/* TODO: Prepare report data and publish */
+	/* return {{ service_name }}_report_{{ method.report_field_name }}(report_data, K_MSEC(250)); */
+	return 0;
+{%- endif %}
+}
+{%- endif %}
+{%- endfor %}
+{%- else %}
+{%- for field in invoke_fields %}
 
-/* TODO: Implement {{ field.name }} - add business logic and report state changes */
-static int {{ field.name }}(const struct service *service{% if not field.is_empty %}, const struct msg_{{ service_name }}_{{ field.message_type|lower }} *{{ field.message_type|lower }}{% endif %})
+/* Fallback: No service definition found, using invoke fields */
+static int {{ field.name }}(const struct service *service{% if not field.is_empty %}, const struct msg_{{ service_name }}_{{ field.message_type|camel_to_snake }} *{{ field.message_type|camel_to_snake }}{% endif %})
 {
 	struct {{ service_name }}_data *data = service->data;
 	int ret = 0;
@@ -134,17 +171,23 @@ static int {{ field.name }}(const struct service *service{% if not field.is_empt
 		/* TODO: Access/modify service state */
 	}
 
-	/* TODO: Add business logic */
+	/* TODO: Add business logic and report state changes */
 
 	return ret;
 }
-{%- endif %}
 {%- endfor %}
+{%- endif %}
 
 static struct {{ service_name }}_api api = {
+{%- if rpc_methods %}
+{%- for method in rpc_methods %}
+	.{{ method.name }} = {{ method.name }},
+{%- endfor %}
+{%- else %}
 {%- for field in invoke_fields %}
 	.{{ field.name }} = {{ field.name }},
 {%- endfor %}
+{%- endif %}
 };
 
 static struct {{ service_name }}_data data = {

@@ -10,6 +10,10 @@ message MsgTickService {
     uint32 delay_ms = 1;
   }
 
+  message Events {
+    optional int64 tick = 1;
+  }
+
   message Invoke {
     oneof tick_invoke {
       Empty start = 1;
@@ -17,6 +21,7 @@ message MsgTickService {
       Empty get_status = 3;
       Config config = 4;
       Empty get_config = 5;
+      Empty get_events = 6;
     }
   }
 
@@ -24,7 +29,17 @@ message MsgTickService {
     oneof tick_report {
       MsgServiceStatus status = 1;
       Config config = 2;
-      Empty tick = 3;
+      Events events = 3;
     }
   }
+}
+
+service TickService {
+  rpc start (Empty) returns (MsgServiceStatus);
+  rpc stop (Empty) returns (MsgServiceStatus);
+  rpc get_status (Empty) returns (MsgServiceStatus);
+  rpc config (MsgTickService.Config) returns (MsgTickService.Config);
+  rpc get_config (Empty) returns (MsgTickService.Config);
+  /* This will report the battery events. No need an invokable API */
+  rpc get_events (Empty) returns (stream MsgTickService.Events);
 }

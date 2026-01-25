@@ -23,6 +23,7 @@ struct tick_service_api {
 	int (*config)(const struct service *service,
 	                        const struct msg_tick_service_config *config);
 	int (*get_config)(const struct service *service);
+	int (*get_events)(const struct service *service);
 };
 
 static inline int tick_service_start(k_timeout_t timeout)
@@ -65,6 +66,14 @@ static inline int tick_service_get_config(k_timeout_t timeout)
 	return zbus_chan_pub(&chan_tick_service_invoke,
 	                     &(struct msg_tick_service_invoke){
 	                             .which_tick_invoke = MSG_TICK_SERVICE_INVOKE_GET_CONFIG_TAG},
+	                     timeout);
+}
+
+static inline int tick_service_get_events(k_timeout_t timeout)
+{
+	return zbus_chan_pub(&chan_tick_service_invoke,
+	                     &(struct msg_tick_service_invoke){
+	                             .which_tick_invoke = MSG_TICK_SERVICE_INVOKE_GET_EVENTS_TAG},
 	                     timeout);
 }
 
