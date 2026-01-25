@@ -151,23 +151,17 @@ int {{ service_name }}_set_implementation(const struct service *implementation);
 /* GENERATED FILE - DO NOT EDIT */
 /* Generated from {{ service_name }}.proto */
 
-#include "service.pb.h"
 #include "{{ service_name }}.h"
-#include "{{ service_name }}/{{ service_name }}.pb.h"
-#include "zephyr/init.h"
-#include "zephyr/spinlock.h"
-#include "zephyr/sys/check.h"
-#include "zephyr/zbus/zbus.h"
+#include <zephyr/zbus/zbus.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <sys/errno.h>
 
 LOG_MODULE_REGISTER({{ service_name }}, CONFIG_{{ service_name_upper }}_LOG_LEVEL);
 
-ZBUS_CHAN_DEFINE(chan_{{ service_name }}_invoke, msg_{{ service_name }}_invoke, NULL, NULL,
+ZBUS_CHAN_DEFINE(chan_{{ service_name }}_invoke, struct msg_{{ service_name }}_invoke, NULL, NULL,
 		 ZBUS_OBSERVERS(lis_{{ service_name }}), MSG_{{ service_name_upper }}_INVOKE_INIT_DEFAULT);
 
-ZBUS_CHAN_DEFINE(chan_{{ service_name }}_report, msg_{{ service_name }}_report, NULL, NULL,
+ZBUS_CHAN_DEFINE(chan_{{ service_name }}_report, struct msg_{{ service_name }}_report, NULL, NULL,
 		 ZBUS_OBSERVERS_EMPTY, MSG_{{ service_name_upper }}_REPORT_INIT_DEFAULT);
 
 static const struct service *impl = NULL;
@@ -189,7 +183,7 @@ int {{ service_name }}_set_implementation(const struct service *implementation)
 static void api_handler(const struct zbus_channel *chan)
 {
 	struct {{ service_name }}_api *api;
-	const msg_{{ service_name }}_invoke *ivk;
+	const struct msg_{{ service_name }}_invoke *ivk;
 
 	if (impl == NULL) {
 		LOG_ERR("Service implementation required!");
@@ -204,7 +198,7 @@ static void api_handler(const struct zbus_channel *chan)
 	api = impl->api;
 	ivk = zbus_chan_const_msg(chan);
 
-	switch (ivk->which_{{ service_name }}_invoke) {
+	switch (ivk->which_{{ invoke_oneof_name }}) {
 {%- for field in invoke_fields %}
 	case MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG:
 		if (api->{{ field.name }}) {
@@ -573,10 +567,12 @@ typedef struct msg_tick_service_invoke {
 - Forces good architecture (data-driven design)
 - Generated files can be .gitignored in future
 
-### Why never generate _impl.c?
-- Contains hand-written business logic
-- Cannot be automatically derived from proto
-- Developer responsibility to implement API contract
+### Why generate _impl.c as optional template (not required)?
+- ✅ **UPDATED**: Now supports optional _impl.c template generation via `--generate-impl` flag
+- Template provides proper structure and TODO comments for faster development
+- Never overwrites existing _impl.c files (safe to run multiple times)
+- Contains hand-written business logic that cannot be fully derived from proto
+- Developer responsibility to complete implementation based on TODO guidance
 
 ### Why single-return pattern (for non-void functions)?
 - User requirement for code style
@@ -599,6 +595,12 @@ typedef struct msg_tick_service_invoke {
 ### Risk: Build system integration complexity
 **Mitigation**: Start with manual generation, add CMake automation incrementally
 
+## Completed Enhancements
+
+1. ✅ **_impl.c Template Generation** (2026-01-25): Optional template generation with `--generate-impl` flag
+2. ✅ **Cleaned Up Includes** (2026-01-25): Removed unnecessary includes from service.c.jinja template
+3. ✅ **Correct Oneof Field Names** (2026-01-25): Use `invoke_oneof_name` variable instead of hardcoded `service_name` in switch statement
+
 ## Future Enhancements
 
 1. Generate CMakeLists.txt for new services
@@ -607,6 +609,7 @@ typedef struct msg_tick_service_invoke {
 4. Add validation for proto structure conventions
 5. Generate unit test stubs
 6. Add --watch mode for development
+7. Automatic CMake integration (regenerate on proto changes)
 
 ## Developer Workflow Summary
 
@@ -636,7 +639,7 @@ typedef struct msg_tick_service_invoke {
    $ just clean build run
 ```
 
-## Success Criteria
+## Success Criteria (Original Implementation)
 
 ✅ proto-schema-parser correctly parses tick_service.proto
 ✅ Generator extracts service name, invoke fields, config fields
@@ -655,3 +658,201 @@ typedef struct msg_tick_service_invoke {
 ✅ Generator script located in modules/services/shared/codegen/
 ✅ Templates use Jinja2 for clean code generation
 ✅ Templates properly handle conditionals and loops
+
+---
+
+## Refinement: Cleaned Up service.c.jinja Includes
+
+**Completed: 2026-01-25**
+
+### Changes
+Removed unnecessary includes from `service.c.jinja` template:
+- ❌ Removed: `"service.pb.h"` (not needed, types come through service header)
+- ❌ Removed: `"{{ service_name }}/{{ service_name }}.pb.h"` (included via service header)
+- ❌ Removed: `"zephyr/init.h"` (not used)
+- ❌ Removed: `"zephyr/spinlock.h"` (not used in infrastructure file)
+- ❌ Removed: `"zephyr/sys/check.h"` (not used)
+- ❌ Removed: `<sys/errno.h>` (not needed, only -EBUSY used)
+
+**Result**: Cleaner generated code with only necessary includes:
+- ✅ `"{{ service_name }}.h"` - Service interface
+- ✅ `<zephyr/zbus/zbus.h>` - zbus types and macros
+- ✅ `<zephyr/kernel.h>` - Zephyr kernel types
+- ✅ `<zephyr/logging/log.h>` - Logging macros
+
+**Additional Fix**: Changed `which_{{ service_name }}_invoke` to `which_{{ invoke_oneof_name }}` to use the correct oneof field name extracted from the proto.
+
+---
+
+## Enhancement: _impl.c Template Generation
+
+**Completed: 2026-01-25**
+
+### Goal
+Add optional template generation for `<service>_impl.c` files to accelerate developer workflow when creating new services.
+
+### Problem Statement
+Developers had to manually create `_impl.c` files from scratch, which was time-consuming and error-prone. A template would:
+- Ensure consistent structure across all services
+- Provide proper function signatures matching the generated API
+- Include spinlock usage patterns for thread safety
+- Remind developers to publish reports when state changes
+- Reduce boilerplate coding
+
+### Implementation Summary
+
+#### Files Created
+1. **`templates/service_impl.c.jinja`** - New template with:
+   - Proper includes and logging declarations
+   - TODO comments for helper macros and service-specific resources
+   - Function stubs with correct signatures for all API functions
+   - Context-specific guidance for common functions (start, stop, config, get_status, get_config)
+   - Spinlock usage patterns (`K_SPINLOCK(&data->lock) { ... }`)
+   - WARNING comments reminding to publish reports on state changes
+   - Static API and data structures
+   - Init function and SERVICE_DEFINE macro
+
+#### Files Modified
+2. **`generate_service.py`**:
+   - Added extraction of `report_oneof_name` from Report message oneof
+   - Added `report_oneof_name` to context dictionary
+   - Added `--generate-impl` command-line flag
+   - Added conditional generation logic (only creates `_impl.c` if it doesn't exist)
+   - Updated docstring with usage examples for both modes
+
+3. **`CLAUDE.md`** (project root):
+   - Updated "What Gets Generated" section to include `_impl.c` template
+   - Updated "What Is Hand-Written" section to clarify template usage
+   - Added usage examples for both with/without `--generate-impl`
+   - Split "Developer Workflow" into "New Services" and "Existing Services"
+   - Updated "Key Principles" to mention template behavior
+   - Updated "How It Works" section with new template and parser capabilities
+
+### Usage
+
+#### For New Services
+```bash
+cd modules/services/shared/codegen
+
+python3 generate_service.py \
+    --proto ../../new_service/new_service.proto \
+    --output-dir ../../new_service \
+    --service-name new_service \
+    --module-dir new_service \
+    --generate-impl
+```
+
+Output:
+```
+Parsing ../../new_service/new_service.proto...
+Service: new_service
+Invoke fields: ['start', 'stop', 'config']
+Rendering templates...
+Generated: ../../new_service/new_service.h
+Generated: ../../new_service/new_service.c
+Generated template: ../../new_service/new_service_impl.c
+Note: Complete TODO items and remove WARNING comments
+```
+
+#### For Existing Services (Modifying APIs)
+```bash
+python3 generate_service.py \
+    --proto ../../tick/tick_service.proto \
+    --output-dir ../../tick \
+    --service-name tick_service \
+    --module-dir tick
+    # Note: No --generate-impl flag to avoid attempting to overwrite existing impl
+```
+
+### Template Structure
+
+The generated `_impl.c` template includes:
+
+1. **Header Comments**: Marks file as generated template with TODO reminder
+2. **Includes**: Proper service header and logging includes
+3. **TODO Sections**:
+   - Helper macros (for report message construction)
+   - Service-specific resources (timers, work queues, threads)
+4. **Function Stubs**: For each invoke field with:
+   - Correct function signature matching API
+   - Context-specific TODO comments explaining what the function should do
+   - Spinlock usage pattern for thread-safe state access
+   - WARNING comment with example of how to publish reports
+5. **Static Structures**: API struct, data struct with proper initialization
+6. **Init Function**: Standard initialization with implementation registration
+7. **SERVICE_DEFINE**: Macro to register service with Zephyr
+
+### Template TODO Comments
+
+Three types of guidance:
+
+1. **Section TODOs** - Optional areas for service-specific code
+2. **Function TODOs** - Guidance for each API function:
+   - `start`: Update state to running, start resources, report status
+   - `stop`: Stop resources, update state to stopped, report status
+   - `get_status`: Read current status, publish report
+   - `get_config`: Read current config, publish report
+   - `config`: Validate new config, update state, publish report
+   - Others: Implement business logic, use spinlocks, report changes
+3. **Inline WARNINGs** - Critical reminders within function bodies to publish reports
+
+### Safety Guarantees
+
+- **Never Overwrites**: If `<service>_impl.c` exists, generator skips it with message
+- **Idempotent**: Safe to run multiple times; existing implementations preserved
+- **Explicit Opt-In**: Only generates template when `--generate-impl` flag is provided
+- **Clear Marking**: Template includes header indicating it needs completion
+
+### Verification Results
+
+✅ New template file `service_impl.c.jinja` created with proper structure
+✅ Generator extracts `report_oneof_name` from proto Report message
+✅ `--generate-impl` flag added and working correctly
+✅ Generator creates `_impl.c` ONLY if file doesn't exist
+✅ Generated `_impl.c` includes all function stubs with correct signatures
+✅ Generated `_impl.c` includes 23 TODO comments providing guidance
+✅ Generated `_impl.c` includes 5 WARNING comments about reporting
+✅ Generated `_impl.c` includes spinlock usage patterns
+✅ Generated `_impl.c` includes static structures (api, data)
+✅ Generated `_impl.c` includes init function and SERVICE_DEFINE
+✅ Existing `_impl.c` files are never overwritten
+✅ Generated template compiles successfully (with stub returns)
+✅ Tested with test service: all files generated correctly
+✅ Tested with existing tick service: `_impl.c` correctly preserved
+
+### Developer Workflow (New Services)
+
+1. **Create Proto File**: Define messages, Invoke, Report, Config
+2. **Generate All Files**:
+   ```bash
+   python3 generate_service.py ... --generate-impl
+   ```
+3. **Complete Implementation**:
+   - Read TODO comments for guidance
+   - Implement business logic with proper spinlock usage
+   - Add zbus_chan_pub calls to report state changes
+   - Remove TODO/WARNING comments when complete
+4. **Build and Test**:
+   ```bash
+   just clean build run
+   ```
+
+### Benefits
+
+1. **Faster Development**: Start with proper structure instead of blank file
+2. **Consistency**: All services follow the same patterns
+3. **Guidance**: TODO comments explain what each function should do
+4. **Safety**: Template includes spinlock patterns and thread-safety reminders
+5. **Best Practices**: Reminds developers to report state changes
+6. **No Risk**: Never overwrites existing implementations
+7. **Reduced Errors**: Proper signatures and structures from the start
+
+### Future Enhancements
+
+Potential improvements:
+- Automatic CMake integration (regenerate on proto changes)
+- Generate CMakeLists.txt for new services
+- Generate Kconfig files for new services
+- Generate unit test stubs
+- Add `--watch` mode for development
+- Extend template to include service-specific patterns (timers, work queues)

@@ -20,7 +20,7 @@ if(CONFIG_TICK_SERVICE)
 
     zephyr_library()
 
-    zephyr_library_sources(tick_service.c)
+    zephyr_library_sources(tick_service.c tick_service_impl.c)
 
     zephyr_library_link_libraries(tick_service)
 

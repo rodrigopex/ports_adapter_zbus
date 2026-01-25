@@ -1,23 +1,17 @@
 /* GENERATED FILE - DO NOT EDIT */
 /* Generated from {{ service_name }}.proto */
 
-#include "service.pb.h"
 #include "{{ service_name }}.h"
-#include "{{ service_name }}/{{ service_name }}.pb.h"
-#include "zephyr/init.h"
-#include "zephyr/spinlock.h"
-#include "zephyr/sys/check.h"
-#include "zephyr/zbus/zbus.h"
+#include <zephyr/zbus/zbus.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <sys/errno.h>
 
 LOG_MODULE_REGISTER({{ service_name }}, CONFIG_{{ service_name_upper }}_LOG_LEVEL);
 
-ZBUS_CHAN_DEFINE(chan_{{ service_name }}_invoke, msg_{{ service_name }}_invoke, NULL, NULL,
+ZBUS_CHAN_DEFINE(chan_{{ service_name }}_invoke, struct msg_{{ service_name }}_invoke, NULL, NULL,
 		 ZBUS_OBSERVERS(lis_{{ service_name }}), MSG_{{ service_name_upper }}_INVOKE_INIT_DEFAULT);
 
-ZBUS_CHAN_DEFINE(chan_{{ service_name }}_report, msg_{{ service_name }}_report, NULL, NULL,
+ZBUS_CHAN_DEFINE(chan_{{ service_name }}_report, struct msg_{{ service_name }}_report, NULL, NULL,
 		 ZBUS_OBSERVERS_EMPTY, MSG_{{ service_name_upper }}_REPORT_INIT_DEFAULT);
 
 static const struct service *impl = NULL;
@@ -39,7 +33,7 @@ int {{ service_name }}_set_implementation(const struct service *implementation)
 static void api_handler(const struct zbus_channel *chan)
 {
 	struct {{ service_name }}_api *api;
-	const msg_{{ service_name }}_invoke *ivk;
+	const struct msg_{{ service_name }}_invoke *ivk;
 
 	if (impl == NULL) {
 		LOG_ERR("Service implementation required!");
@@ -54,7 +48,7 @@ static void api_handler(const struct zbus_channel *chan)
 	api = impl->api;
 	ivk = zbus_chan_const_msg(chan);
 
-	switch (ivk->which_{{ service_name }}_invoke) {
+	switch (ivk->which_{{ invoke_oneof_name }}) {
 {%- for field in invoke_fields %}
 	case MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG:
 		if (api->{{ field.name }}) {

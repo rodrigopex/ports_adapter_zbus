@@ -7,23 +7,24 @@ option (nanopb_fileopt).anonymous_oneof = true;
 
 message MsgTickService {
   message Config {
-    /* In milliseconds */
-    optional bool should_report = 1;
-    uint32 delay_ms = 2;
+    uint32 delay_ms = 1;
   }
 
   message Invoke {
     oneof tick_invoke {
-      Void start = 1;
-      Void stop = 2;
-      Config config = 3;
+      Empty start = 1;
+      Empty stop = 2;
+      Empty get_status = 3;
+      Config config = 4;
+      Empty get_config = 5;
     }
   }
 
   message Report {
     oneof tick_report {
       MsgServiceStatus status = 1;
-      Void tick = 2;
+      Config config = 2;
+      Empty tick = 3;
     }
   }
 }

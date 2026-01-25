@@ -7,9 +7,18 @@ Uses proto-schema-parser to parse .proto files and Jinja2 templates to generate
 boilerplate code following the ports & adapters architecture pattern.
 
 Usage:
+    # Generate only .h and .c files:
     python3 generate_service.py --proto ../../tick/tick_service.proto \
                                 --output-dir ../../tick \
-                                --service-name tick_service
+                                --service-name tick_service \
+                                --module-dir tick
+
+    # Generate .h, .c, and _impl.c template (only if _impl.c doesn't exist):
+    python3 generate_service.py --proto ../../tick/tick_service.proto \
+                                --output-dir ../../tick \
+                                --service-name tick_service \
+                                --module-dir tick \
+                                --generate-impl
 """
 
 import argparse
@@ -62,7 +71,7 @@ def map_proto_type_to_c(proto_type: str) -> str:
     return mapping.get(proto_type, proto_type)
 
 
-def parse_service_proto(proto_path: str, service_name: str) -> dict:
+def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> dict:
     """Parse service protobuf file and extract structure information"""
     parser = Parser()
 
@@ -120,10 +129,13 @@ def parse_service_proto(proto_path: str, service_name: str) -> dict:
 
     # Extract invoke fields from oneof
     invoke_fields = []
+    invoke_oneof_name = None
 
     # Get oneof groups from Invoke message
     for element in invoke_msg.elements:
         if element.__class__.__name__ == 'OneOf':
+            # Capture the oneof name (e.g., "tick_invoke")
+            invoke_oneof_name = element.name
             # Extract fields from oneof
             for field_element in element.elements:
                 if hasattr(field_element, 'name') and field_element.__class__.__name__ == 'Field':
@@ -138,6 +150,18 @@ def parse_service_proto(proto_path: str, service_name: str) -> dict:
     if not invoke_fields:
         print("Error: No invoke fields found in Invoke message oneof")
         sys.exit(1)
+
+    if not invoke_oneof_name:
+        print("Error: No oneof found in Invoke message")
+        sys.exit(1)
+
+    # Extract report oneof name from Report message
+    report_oneof_name = None
+    if report_msg:
+        for element in report_msg.elements:
+            if element.__class__.__name__ == 'OneOf':
+                report_oneof_name = element.name
+                break
 
     # Extract config fields
     config_fields = []
@@ -155,6 +179,9 @@ def parse_service_proto(proto_path: str, service_name: str) -> dict:
         'service_name': service_name,
         'service_name_upper': snake_to_upper(service_name),
         'service_name_camel': service_msg.name.replace('Msg', '').replace('Service', ''),
+        'module_dir': module_dir,
+        'invoke_oneof_name': invoke_oneof_name,
+        'report_oneof_name': report_oneof_name,
         'invoke_fields': invoke_fields,
         'config_fields': config_fields,
         'config_type': f"msg_{service_name}_config" if config_msg else None,
@@ -196,6 +223,16 @@ def main():
         required=True,
         help='Service name (e.g., tick_service)'
     )
+    parser.add_argument(
+        '--module-dir',
+        required=True,
+        help='Module directory name (e.g., tick for tick service)'
+    )
+    parser.add_argument(
+        '--generate-impl',
+        action='store_true',
+        help='Generate _impl.c template file (only if it does not exist)'
+    )
 
     args = parser.parse_args()
 
@@ -210,7 +247,7 @@ def main():
 
     # Parse proto file
     print(f"Parsing {args.proto}...")
-    context = parse_service_proto(args.proto, args.service_name)
+    context = parse_service_proto(args.proto, args.service_name, args.module_dir)
 
     print(f"Service: {context['service_name']}")
     print(f"Invoke fields: {[f['name'] for f in context['invoke_fields']]}")
@@ -241,9 +278,25 @@ def main():
         f.write(impl_content)
     print(f"Generated: {impl_path}")
 
-    # Remind about _impl.c
-    print(f"\nNote: {args.service_name}_impl.c must be written manually")
-    print(f"      Implement functions defined in struct {args.service_name}_api")
+    # Optionally generate _impl.c template
+    if args.generate_impl:
+        impl_c_path = os.path.join(args.output_dir, f"{args.service_name}_impl.c")
+
+        if os.path.exists(impl_c_path):
+            print(f"\nSkipping: {impl_c_path} already exists (not overwriting)")
+        else:
+            env = Environment(loader=FileSystemLoader(template_dir))
+            impl_c_template = env.get_template('service_impl.c.jinja')
+            impl_c_content = impl_c_template.render(**context)
+
+            with open(impl_c_path, 'w') as f:
+                f.write(impl_c_content)
+            print(f"Generated template: {impl_c_path}")
+            print(f"Note: Complete TODO items and remove WARNING comments")
+    else:
+        # Remind about _impl.c
+        print(f"\nNote: {args.service_name}_impl.c must be written manually")
+        print(f"      Implement functions defined in struct {args.service_name}_api")
 
 
 if __name__ == '__main__':
