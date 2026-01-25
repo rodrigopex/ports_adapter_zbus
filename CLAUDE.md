@@ -262,13 +262,18 @@ This pattern provides:
   - Periodic timing service using K_TIMER
   - Demonstrates full three-file pattern (`.h`, `.c`, `_impl.c`)
   - Shows thread-safe state management with spinlocks
-  - Publishes TICK events at configurable intervals
-  - Commands: start, stop, config, get_status, get_config
-  - Reports: status, config, tick
+  - Publishes Events with timestamps at configurable intervals
+  - Commands: start, stop, config, get_status, get_config, get_events
+  - Reports: status, config, events (with timestamp)
 
 - **ui** (`modules/services/ui/`): UI control service; receives BLINK commands
 
-- **battery** (`modules/services/battery/`): Battery management service
+- **battery** (`modules/services/battery/`) - **Generated Service Example**:
+  - Battery monitoring service
+  - Fully generated using code generator with RPC-based report mapping
+  - Demonstrates custom message types (BatteryState with voltage, percentage, charging status)
+  - Commands: start, stop, config, get_status, get_config, get_battery_state, get_events
+  - Reports: status, config, battery_state, events
 
 - **tamper_detection** (`modules/services/tamper_detection/`): Security monitoring service
 
@@ -284,8 +289,18 @@ Example: `TickService+UiService_adapter.c` listens to tick reports and invokes U
 static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
 {
     const struct msg_tick_service_report *tick_report = zbus_chan_const_msg(chan);
-    if (tick_report->which_tick_report == MSG_TICK_SERVICE_REPORT_TICK_TAG) {
-        ui_service_blink(K_NO_WAIT);  // Adapt: Tick → UI
+
+    switch (tick_report->which_tick_report) {
+    case MSG_TICK_SERVICE_REPORT_EVENTS_TAG:
+        if (tick_report->events.has_tick) {
+            LOG_DBG("Received Tick Service report at %lld, invoking UI Service blink",
+                    tick_report->events.tick);
+            ui_service_blink(K_NO_WAIT);  // Adapt: Tick → UI
+        }
+        break;
+    default:
+        // Ignore other report types
+        break;
     }
 }
 
@@ -305,6 +320,10 @@ message MsgTickService {
     uint32 delay_ms = 1;
   }
 
+  message Events {
+    optional int64 tick = 1;       // Timestamp of tick event
+  }
+
   message Invoke {
     oneof tick_invoke {
       Empty start = 1;          // Start the service
@@ -312,6 +331,7 @@ message MsgTickService {
       Empty get_status = 3;     // Request status report
       Config config = 4;        // Set configuration
       Empty get_config = 5;     // Request config report
+      Empty get_events = 6;     // Request events stream
     }
   }
 
@@ -319,7 +339,7 @@ message MsgTickService {
     oneof tick_report {
       MsgServiceStatus status = 1;  // Status updates (running/stopped)
       Config config = 2;            // Config updates
-      Empty tick = 3;               // Periodic tick events
+      Events events = 3;            // Periodic tick events with timestamps
     }
   }
 }
@@ -334,7 +354,7 @@ Key patterns:
 - **Reports**: Use `oneof` for different event types
   - `status`: Lifecycle events (running/stopped)
   - `config`: Configuration updates (in response to get_config or config commands)
-  - Domain-specific events: `tick` (periodic events)
+  - Domain-specific events: `events` (periodic events with timestamps or custom data)
 - **Shared Types**: Import `"service.proto"` for common types (`Empty`, `MsgServiceStatus`)
 - **nanopb Options**: Use `option (nanopb_fileopt).anonymous_oneof = true;` to flatten oneof field names in generated C code
 - **Query Pattern**: Services respond to `get_status` and `get_config` by publishing corresponding reports

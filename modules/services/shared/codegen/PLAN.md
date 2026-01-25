@@ -604,12 +604,13 @@ typedef struct msg_tick_service_invoke {
 5. ✅ **Private Header Generation** (2026-01-25): Generate `private/<service>_priv.h` with static inline report helper functions
 6. ✅ **CamelCase to snake_case Conversion** (2026-01-25): Fix type name conversion in private header to match nanopb naming conventions
 7. ✅ **RPC-Based Report Function Mapping** (2026-01-25): Parse service definitions to automatically determine correct report functions based on RPC return types
+8. ✅ **Initialization Message Improvements** (2026-01-25): Fixed typo in init message ("initialed" → "initialized") and improved grammar for better clarity
 
 ## Future Enhancements
 
 1. Generate CMakeLists.txt for new services
 2. Generate Kconfig for new services
-3. Extend to other services (ui, battery, tamper_detection)
+3. Extend to other services (ui, tamper_detection) - battery service completed
 4. Add validation for proto structure conventions
 5. Generate unit test stubs
 6. Add --watch mode for development
@@ -1687,6 +1688,80 @@ The `camel_to_snake()` function correctly handles various patterns:
 ✅ Filter registered in both render contexts (main and --generate-impl)
 ✅ Existing services without CamelCase types unaffected
 ✅ Template change is minimal (one character difference: |lower → |camel_to_snake)
+
+---
+
+## Enhancement: Initialization Message Improvements
+
+**Completed: 2026-01-25**
+
+### Changes
+
+Fixed typo and improved grammar in the service initialization message template.
+
+**Modified**: `templates/service_impl.c.jinja` (line 204)
+
+**Before** (incorrect):
+```c
+printk("   -> %s initialed with%s error\n", self->name, err == 0 ? " no" : "");
+```
+
+**Issues**:
+- Typo: "initialed" is not a proper word (should be "initialized")
+- Awkward grammar: "initialed with no error" vs "initialed with error"
+
+**After** (corrected):
+```c
+printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
+```
+
+**Improvements**:
+- Correct spelling: "initialized"
+- Better grammar: "initialized" vs "not initialized"
+- More natural output messages
+
+### Example Output
+
+**Before**:
+```
+0x20001234: battery_service initialing
+   -> battery_service initialed with no error
+```
+
+**After**:
+```
+0x20001234: battery_service initialing...
+   -> battery_service initialized
+```
+
+Or if error occurs:
+```
+0x20001234: battery_service initialing...
+   -> battery_service not initialized
+```
+
+### Related Changes
+
+Also updated `modules/services/shared/service.c` to add "..." to the "initialing" message for consistency:
+```c
+printk("%p: %s initialing...\n", instance, instance->name);
+```
+
+### Impact
+
+- **Breaking Change**: No (cosmetic output change only)
+- **Backward Compatible**: Yes (no API or behavior changes)
+- **Build Status**: No impact
+- **Regeneration Required**: Yes (for services to get updated messages)
+
+### Success Criteria
+
+✅ Typo fixed ("initialed" → "initialized")
+✅ Grammar improved (clearer success/failure messages)
+✅ Init message consistency improved with "..." suffix
+✅ All services regenerated with updated template
+✅ Build succeeds with updated messages
+✅ Runtime output shows improved messages
 
 ---
 
