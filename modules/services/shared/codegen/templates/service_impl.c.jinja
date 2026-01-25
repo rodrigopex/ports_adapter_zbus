@@ -7,76 +7,138 @@
 
 LOG_MODULE_DECLARE({{ service_name }}, CONFIG_{{ service_name_upper }}_LOG_LEVEL);
 
-/* TODO: Add service-specific helper macros here if needed
- * Example for report messages:
- * #define ALLOCA_MSG_{{ service_name_upper }}_REPORT_STATUS(...) \
- *     &(struct msg_{{ service_name }}_report) { \
- *         .which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG, \
- *         .status = (struct msg_service_status){ __VA_ARGS__ } \
- *     }
- */
+/* TODO: Add helper macros for report messages (optional) */
 
-/* TODO: Add service-specific resources here if needed
- * Examples:
- * - Timers: K_TIMER_DEFINE(timer_{{ service_name }}, handler, NULL);
- * - Work queues: K_WORK_DEFINE(work_{{ service_name }}, handler);
- * - Threads: K_THREAD_DEFINE(...)
- */
+/* TODO: Add service-specific resources (timers, work queues, threads) */
 
 {%- for field in invoke_fields %}
 
-/* TODO: Implement {{ field.name }} function
- *
- * This function should:
 {%- if field.name == 'start' %}
- * 1. Update service state to running
- * 2. Start any timers/resources
- * 3. Report status change via zbus_chan_pub
+static int start(const struct service *service)
+{
+	struct {{ service_name }}_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = true;
+		status = data->status;
+	}
+
+	/* TODO: Start service resources (timers, threads, etc.) */
+
+	return zbus_chan_pub(
+		&chan_{{ service_name }}_report,
+		&(struct msg_{{ service_name }}_report){
+			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG,
+			.status = status},
+		K_MSEC(200));
+}
 {%- elif field.name == 'stop' %}
- * 1. Stop any running timers/resources
- * 2. Update service state to stopped
- * 3. Report status change via zbus_chan_pub
+
+static int stop(const struct service *service)
+{
+	struct {{ service_name }}_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		status = data->status;
+	}
+
+	if (!status.is_running) {
+		LOG_DBG("Service has not started yet!");
+	}
+
+	/* TODO: Stop service resources (timers, threads, etc.) */
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = false;
+	}
+
+	return zbus_chan_pub(
+		&chan_{{ service_name }}_report,
+		&(struct msg_{{ service_name }}_report){
+			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG,
+			.status = status},
+		K_MSEC(200));
+}
 {%- elif field.name == 'get_status' %}
- * 1. Read current status from service data (thread-safe)
- * 2. Report status via zbus_chan_pub
+
+static int get_status(const struct service *service)
+{
+	struct {{ service_name }}_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		status = data->status;
+	}
+
+	return zbus_chan_pub(
+		&chan_{{ service_name }}_report,
+		&(struct msg_{{ service_name }}_report){
+			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_STATUS_TAG,
+			.status = status},
+		K_MSEC(200));
+}
 {%- elif field.name == 'get_config' %}
- * 1. Read current config from service data (thread-safe)
- * 2. Report config via zbus_chan_pub
-{%- elif field.name == 'config' %}
- * 1. Validate new configuration
- * 2. Update service data (thread-safe)
- * 3. Report config change via zbus_chan_pub
+
+static int get_config(const struct service *service)
+{
+	struct {{ service_name }}_data *data = service->data;
+{%- if has_config %}
+	struct msg_{{ service_name }}_config config;
+
+	K_SPINLOCK(&data->lock) {
+		config = data->config;
+	}
+
+	return zbus_chan_pub(
+		&chan_{{ service_name }}_report,
+		&(struct msg_{{ service_name }}_report){
+			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_CONFIG_TAG,
+			.config = config},
+		K_MSEC(200));
 {%- else %}
- * 1. Implement business logic
- * 2. Update service state if needed (thread-safe with spinlock)
- * 3. Report state change via zbus_chan_pub if state changed
+	int ret = 0;
+
+	/* TODO: Implement if service has configuration */
+
+	return ret;
 {%- endif %}
- */
+}
+{%- elif field.name == 'config' %}
+
+static int config(const struct service *service, const struct msg_{{ service_name }}_config *new_config)
+{
+	struct {{ service_name }}_data *data = service->data;
+
+	K_SPINLOCK(&data->lock) {
+		data->config = *new_config;
+	}
+
+	return zbus_chan_pub(
+		&chan_{{ service_name }}_report,
+		&(struct msg_{{ service_name }}_report){
+			.which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_CONFIG_TAG,
+			.config = *new_config},
+		K_MSEC(200));
+}
+{%- else %}
+
+/* TODO: Implement {{ field.name }} - add business logic and report state changes */
 static int {{ field.name }}(const struct service *service{% if not field.is_empty %}, const struct msg_{{ service_name }}_{{ field.message_type|lower }} *{{ field.message_type|lower }}{% endif %})
 {
 	struct {{ service_name }}_data *data = service->data;
 	int ret = 0;
 
-	/* TODO: Implement function logic here */
-
 	K_SPINLOCK(&data->lock) {
-		/* TODO: Access/modify service state here (thread-safe) */
+		/* TODO: Access/modify service state */
 	}
 
-	/* TODO: Add business logic here */
-
-	/* WARNING: If this function changes service state, publish a report:
-	 *
-	 * return zbus_chan_pub(
-	 *     &chan_{{ service_name }}_report,
-	 *     &(struct msg_{{ service_name }}_report){
-	 *         .which_{{ report_oneof_name }} = MSG_{{ service_name_upper }}_REPORT_<TYPE>_TAG,
-	 *         .<field> = <value>},
-	 *     K_MSEC(200));
-	 */
+	/* TODO: Add business logic */
 
 	return ret;
 }
+{%- endif %}
 {%- endfor %}
 
 static struct {{ service_name }}_api api = {
