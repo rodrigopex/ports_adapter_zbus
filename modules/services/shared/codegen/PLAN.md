@@ -603,6 +603,7 @@ typedef struct msg_tick_service_invoke {
 4. ✅ **Improved Template Implementations** (2026-01-25): Replaced verbose TODOs with actual working implementations for standard functions
 5. ✅ **Private Header Generation** (2026-01-25): Generate `private/<service>_priv.h` with static inline report helper functions
 6. ✅ **CamelCase to snake_case Conversion** (2026-01-25): Fix type name conversion in private header to match nanopb naming conventions
+7. ✅ **RPC-Based Report Function Mapping** (2026-01-25): Parse service definitions to automatically determine correct report functions based on RPC return types
 
 ## Future Enhancements
 
@@ -1145,6 +1146,365 @@ return tick_service_report_status(&status, K_MSEC(250));
 ```
 
 **Result**: 85% reduction in boilerplate code per report call.
+
+---
+
+## Enhancement: RPC-Based Report Function Mapping
+
+**Completed: 2026-01-25**
+
+### Goal
+Parse `service` definitions from proto files to automatically determine which report function each implementation should call based on the RPC method's return type, eliminating manual guesswork and ensuring type-safe mapping.
+
+### Problem Statement
+Previously, generated `_impl.c` templates included generic implementations that didn't know which report function to call. Developers had to:
+- Manually determine which report function matches each invoke command
+- Guess what parameters to pass to the report function
+- Remember to add report calls (no enforcement)
+
+However, the proto file already declared this information in the `service` definition via RPC signatures:
+```protobuf
+service TickService {
+  rpc start (Empty) returns (MsgServiceStatus);           // Should call report_status()
+  rpc config (Config) returns (Config);                   // Should call report_config()
+  rpc get_events (Empty) returns (stream Events);         // Should call report_events()
+}
+```
+
+### Solution
+Parse the `service` definition to extract RPC method signatures and automatically generate implementations that call the appropriate report function based on the return type.
+
+### Implementation
+
+#### 1. Service Definition Parsing
+
+**Added to `generate_service.py`**:
+
+```python
+# Extract service definition (for RPC methods)
+service_def = None
+for element in proto_file.file_elements:
+    if hasattr(element, 'name') and element.__class__.__name__ == 'Service':
+        service_def = element
+        break
+```
+
+**Key Discovery**: proto-schema-parser uses `Service` class for service definitions and `Method` class (not `Rpc`) for RPC methods.
+
+#### 2. RPC Method Extraction
+
+**Added RPC method parsing logic**:
+
+```python
+rpc_methods = []
+if service_def and hasattr(service_def, 'elements'):
+    for method_element in service_def.elements:
+        if hasattr(method_element, 'name') and method_element.__class__.__name__ == 'Method':
+            # Extract input type (handle MessageType objects)
+            input_type = method_element.input_type.type if hasattr(method_element.input_type, 'type') else str(method_element.input_type)
+
+            # Extract output type and streaming flag
+            output_type = method_element.output_type
+            is_streaming = hasattr(output_type, 'stream') and output_type.stream
+            output_type_name = output_type.type if hasattr(output_type, 'type') else str(output_type)
+
+            # Map return type to report field name
+            report_field_name = extract_report_field_from_return_type(
+                output_type_name,
+                service_name,
+                report_fields
+            )
+
+            rpc_methods.append({
+                'name': method_element.name,
+                'input_type': input_type,
+                'output_type': output_type_name,
+                'is_streaming': is_streaming,
+                'report_field_name': report_field_name,
+            })
+```
+
+**MessageType Handling**: RPC method types are `MessageType` objects with `.type` and `.stream` attributes, not plain strings.
+
+#### 3. Return Type to Report Field Mapping
+
+**Added helper function**:
+
+```python
+def extract_report_field_from_return_type(return_type: str, service_name: str, report_fields: list) -> str:
+    """Map RPC return type to Report field name."""
+    if return_type == 'MsgServiceStatus':
+        return 'status'
+
+    if return_type.startswith('Msg') and '.' in return_type:
+        # "MsgTickService.Config" → "Config" → "config"
+        nested_type = return_type.split('.')[-1]
+        field_name = camel_to_snake(nested_type).lower()
+    else:
+        field_name = camel_to_snake(return_type).lower()
+
+    # Validate field exists
+    if not any(f['name'] == field_name for f in report_fields):
+        print(f"Warning: RPC return type '{return_type}' maps to '{field_name}' but no such Report field exists")
+
+    return field_name
+```
+
+**Mapping Examples**:
+- `MsgServiceStatus` → `status`
+- `MsgTickService.Config` → `config`
+- `MsgTickService.Events` → `events`
+
+#### 4. Validation
+
+**Added consistency validation**:
+
+```python
+def validate_service_consistency(rpc_methods: list, report_fields: list, invoke_fields: list) -> None:
+    """Validate service definition consistency."""
+    if not rpc_methods:
+        return  # No service definition, skip
+
+    invoke_field_names = {f['name'] for f in invoke_fields}
+    report_field_names = {f['name'] for f in report_fields}
+
+    for method in rpc_methods:
+        # Warn if RPC method has no Invoke field
+        if method['name'] not in invoke_field_names:
+            print(f"Warning: RPC method '{method['name']}' has no corresponding Invoke field")
+
+        # Error if return type has no Report field
+        if method['report_field_name'] not in report_field_names:
+            print(f"Error: RPC method '{method['name']}' returns '{method['output_type']}' "
+                  f"but Report has no field '{method['report_field_name']}'")
+```
+
+#### 5. Template Updates
+
+**Modified `service_impl.c.jinja`**:
+
+Replaced `invoke_fields` iteration with `rpc_methods` iteration:
+
+```jinja
+{%- if rpc_methods %}
+{%- for method in rpc_methods %}
+
+{%- if method.report_field_name == 'status' %}
+{%- if method.name == 'start' %}
+static int start(const struct service *service)
+{
+    struct {{ service_name }}_data *data = service->data;
+    struct msg_service_status status;
+
+    K_SPINLOCK(&data->lock) {
+        data->status.is_running = true;
+        status = data->status;
+    }
+
+    /* TODO: Start service resources */
+
+    return {{ service_name }}_report_status(&status, K_MSEC(250));
+}
+{%- elif method.name == 'stop' %}
+// ... similar for stop
+{%- else %}
+// Generic status-returning methods
+static int {{ method.name }}(...)
+{
+    // ... implementation with automatic report_status() call
+}
+{%- endif %}
+
+{%- elif method.report_field_name == 'config' %}
+// Config-related methods (config, get_config)
+{%- else %}
+// Custom methods with report function hints
+/* RPC returns {{ method.output_type }} - publish to: {{ method.report_field_name }} */
+static int {{ method.name }}(...)
+{
+    /* TODO: Implement logic */
+{%- if method.is_streaming %}
+    /* Streaming RPC - publish events as they occur */
+{%- endif %}
+    return {{ service_name }}_report_{{ method.report_field_name }}(...);
+}
+{%- endif %}
+
+{%- endfor %}
+{%- else %}
+// Fallback to invoke_fields if no service definition
+{%- for field in invoke_fields %}
+// Generic implementation
+{%- endfor %}
+{%- endif %}
+```
+
+**API struct population**:
+```jinja
+static struct {{ service_name }}_api api = {
+{%- if rpc_methods %}
+{%- for method in rpc_methods %}
+    .{{ method.name }} = {{ method.name }},
+{%- endfor %}
+{%- else %}
+{%- for field in invoke_fields %}
+    .{{ field.name }} = {{ field.name }},
+{%- endfor %}
+{%- endif %}
+};
+```
+
+#### 6. Debug Output
+
+**Added informative output during generation**:
+
+```python
+if context['rpc_methods']:
+    print(f"RPC methods: {len(context['rpc_methods'])} found")
+    for m in context['rpc_methods']:
+        streaming = " (streaming)" if m['is_streaming'] else ""
+        print(f"  - {m['name']}({m['input_type']}) -> {m['output_type']}{streaming} => report_{m['report_field_name']}()")
+```
+
+### Generated Code Example
+
+**Proto Definition**:
+```protobuf
+service TickService {
+  rpc start (Empty) returns (MsgServiceStatus);
+  rpc config (Config) returns (Config);
+}
+```
+
+**Generated Implementation**:
+```c
+static int start(const struct service *service)
+{
+    struct tick_service_data *data = service->data;
+    struct msg_service_status status;
+
+    K_SPINLOCK(&data->lock) {
+        data->status.is_running = true;
+        status = data->status;
+    }
+
+    /* TODO: Start service resources (timers, threads, etc.) */
+
+    // Automatically generated based on RPC signature
+    return tick_service_report_status(&status, K_MSEC(250));
+}
+
+static int config(const struct service *service, const struct msg_tick_service_config *config)
+{
+    struct tick_service_data *data = service->data;
+
+    K_SPINLOCK(&data->lock) {
+        data->config = *config;
+    }
+
+    /* TODO: Apply configuration changes */
+
+    // Automatically generated based on RPC signature
+    return tick_service_report_config(config, K_MSEC(250));
+}
+```
+
+### Example Output
+
+**Generator Console Output**:
+```
+Parsing modules/services/tick/tick_service.proto...
+Service: tick_service
+Invoke fields: ['start', 'stop', 'get_status', 'config', 'get_config', 'get_events']
+RPC methods: 6 found
+  - start(Empty) -> MsgServiceStatus => report_status()
+  - stop(Empty) -> MsgServiceStatus => report_status()
+  - get_status(Empty) -> MsgServiceStatus => report_status()
+  - config(MsgTickService.Config) -> MsgTickService.Config => report_config()
+  - get_config(Empty) -> MsgTickService.Config => report_config()
+  - get_events(Empty) -> MsgTickService.Events (streaming) => report_events()
+Config fields: ['delay_ms']
+```
+
+### Benefits
+
+1. **Type-Safe Mapping**: RPC signatures enforce correct report function usage
+2. **Self-Documenting**: Service definitions document the contract
+3. **Less Error-Prone**: No manual report function selection
+4. **Validation**: Generator warns about inconsistencies
+5. **Reduced Boilerplate**: Standard methods get complete implementations automatically
+6. **Backward Compatible**: Services without service definitions fall back to invoke_fields
+
+### Technical Details
+
+**proto-schema-parser Specifics**:
+- Service definitions are `Service` class objects
+- RPC methods are `Method` class objects (not `Rpc`)
+- Method types are `MessageType` objects with `.type` and `.stream` attributes
+- Access type name via: `method.input_type.type` and `method.output_type.type`
+- Check streaming via: `method.output_type.stream`
+
+**Fallback Behavior**:
+If no service definition is found in the proto file, the generator falls back to using `invoke_fields` for template generation, ensuring backward compatibility.
+
+### Testing and Verification
+
+**Test Service Created**:
+```bash
+# Created test proto with service definition
+/tmp/test_rpc_service/test_rpc_service.proto
+
+# Generated all files successfully
+Generated: test_rpc_service.h
+Generated: test_rpc_service.c
+Generated: private/test_rpc_service_priv.h
+Generated template: test_rpc_service_impl.c
+```
+
+**Verified tick_service**:
+- 6 RPC methods parsed correctly
+- Output shows proper mapping to report functions
+- Build succeeds without errors
+- Generated implementations match expected pattern
+
+**Build Verification**:
+```bash
+just build
+# Build succeeds with all services
+# Memory usage: FLASH 46788B (1.12%), RAM 13704B (0.33%)
+```
+
+### Files Modified
+
+1. **`generate_service.py`**:
+   - Added `extract_report_field_from_return_type()` helper
+   - Added `validate_service_consistency()` validation
+   - Added service definition parsing
+   - Added RPC method extraction
+   - Added `rpc_methods` to context dictionary
+   - Added debug output for RPC mappings
+
+2. **`service_impl.c.jinja`**:
+   - Replaced `invoke_fields` iteration with `rpc_methods`
+   - Generate implementations based on RPC return types
+   - Automatic report function calls for standard methods
+   - Hints for custom methods
+   - Fallback to `invoke_fields` if no RPC methods
+
+### Success Criteria
+
+✅ Parser extracts service definitions from proto files
+✅ RPC methods are mapped to report field names correctly
+✅ Generated implementations call correct report functions automatically
+✅ Standard methods (start, stop, config) get intelligent implementations
+✅ Custom methods include appropriate hints with report function names
+✅ Validation warns about inconsistencies between service and messages
+✅ Tick service (6 RPC methods) parses and generates correctly
+✅ Test service generates valid implementation
+✅ Build succeeds with regenerated code
+✅ Runtime behavior remains identical (backward compatible)
+✅ Documentation updated in CLAUDE.md
+✅ PLAN.md updated with implementation details
 
 ---
 

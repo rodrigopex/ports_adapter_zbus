@@ -921,6 +921,71 @@ Note: Complete TODO items in _impl.c
 - Developer only edits `.proto` and `_impl.c` files
 - Regeneration is safe and idempotent (never overwrites existing `_impl.c` files)
 
+#### RPC-Based Report Function Mapping
+
+The generator parses `service` definitions from proto files to automatically determine which report function each implementation should call based on RPC return types. This eliminates manual guesswork and ensures type-safe mapping between service methods and their responses.
+
+**Proto Service Definition**:
+```protobuf
+service TickService {
+  rpc start (Empty) returns (MsgServiceStatus);           // → calls report_status()
+  rpc stop (Empty) returns (MsgServiceStatus);            // → calls report_status()
+  rpc config (Config) returns (Config);                   // → calls report_config()
+  rpc get_events (Empty) returns (stream Events);         // → calls report_events()
+}
+```
+
+**Automatic Mapping Logic**:
+1. **Parse RPC Signatures**: Extract method name, input type, output type, and streaming flag
+2. **Map Return Types to Report Fields**:
+   - `returns MsgServiceStatus` → maps to Report field `status` → generates call to `report_status()`
+   - `returns MsgTickService.Config` → maps to Report field `config` → generates call to `report_config()`
+   - `returns MsgTickService.Events` → maps to Report field `events` → generates call to `report_events()`
+3. **Generate Smart Implementations**: Standard methods (start, stop, config) get complete implementations; custom methods include hints
+
+**Generator Output Example**:
+```
+RPC methods: 6 found
+  - start(Empty) -> MsgServiceStatus => report_status()
+  - stop(Empty) -> MsgServiceStatus => report_status()
+  - get_status(Empty) -> MsgServiceStatus => report_status()
+  - config(MsgTickService.Config) -> MsgTickService.Config => report_config()
+  - get_config(Empty) -> MsgTickService.Config => report_config()
+  - get_events(Empty) -> MsgTickService.Events (streaming) => report_events()
+```
+
+**Generated Implementation Example**:
+```c
+static int start(const struct service *service)
+{
+    struct tick_service_data *data = service->data;
+    struct msg_service_status status;
+
+    K_SPINLOCK(&data->lock) {
+        data->status.is_running = true;
+        status = data->status;
+    }
+
+    /* TODO: Start service resources (timers, threads, etc.) */
+
+    // Automatically generated based on RPC return type
+    return tick_service_report_status(&status, K_MSEC(250));
+}
+```
+
+**Benefits**:
+- **Type-Safe**: RPC signatures enforce correct report function usage
+- **Self-Documenting**: Service definition documents the contract
+- **Less Error-Prone**: No manual report function selection
+- **Validated**: Generator warns about inconsistencies between RPC methods and Report fields
+- **Backward Compatible**: Services without `service` definitions fall back to invoke fields
+
+**Validation**: The generator validates that each RPC method has:
+1. A corresponding Invoke oneof field
+2. A return type that maps to an existing Report oneof field
+
+If inconsistencies are found, warnings and errors are printed during generation.
+
 #### How It Works
 
 The generator uses three components:
