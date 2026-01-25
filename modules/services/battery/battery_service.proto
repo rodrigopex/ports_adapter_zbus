@@ -6,18 +6,52 @@ import "service.proto";
 option (nanopb_fileopt).anonymous_oneof = true;
 
 message MsgBatteryService {
+    message Config {
+      int32 voltage_operation = 1; /* In millivolts */
+      int32 low_battery_threshold = 2; /* In percentage */
+    }
+
+    message BatteryState {
+      int32 voltage = 1;
+      int32 temperature = 2;
+      bool is_charging = 3;
+    }
+
+    message BatteryLowEvent {
+      int32 timestamp = 1;
+    }
+
     message Invoke {
         oneof battery_invoke {
 
-            Void start = 1;
-            Void stop = 2;
+            Empty start = 1;
+            Empty stop = 2;
+            Empty get_status = 3;
+            Config config = 4;
+            Empty get_config = 5;
+            Empty get_battery_state = 6;
+            Events get_events = 7;
 
         }
     }
 
     message Report {
-        oneof battery_report {
+        oneof Msgbattery_report {
             MsgServiceStatus status = 1;
+            Config config = 2;
+            BatteryState battery_state = 3;
+            Events events = 4;
         }
     }
+}
+
+service BatteryService {
+  rpc start (Empty) returns (MsgServiceStatus);
+  rpc stop (Empty) returns (MsgServiceStatus);
+  rpc get_status (Empty) return (MsgServiceStatus);
+  rpc config (MsgBatteryService.Config) returns (MsgBatteryService.Config);
+  rpc get_config (Empty) returns (MsgBatteryService.Config);
+  rpc get_battery_state (Empty) returns (MsgBatteryService.BatteryState);
+  /* This will report the battery events. No need an invokable API */
+  rpc events (Empty) returns (stream MsgBatteryService.Event);
 }

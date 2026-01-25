@@ -155,12 +155,23 @@ def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> 
         print("Error: No oneof found in Invoke message")
         sys.exit(1)
 
-    # Extract report oneof name from Report message
+    # Extract report oneof name and fields from Report message
     report_oneof_name = None
+    report_fields = []
     if report_msg:
         for element in report_msg.elements:
             if element.__class__.__name__ == 'OneOf':
                 report_oneof_name = element.name
+                # Extract fields from oneof
+                for field_element in element.elements:
+                    if hasattr(field_element, 'name') and field_element.__class__.__name__ == 'Field':
+                        report_fields.append({
+                            'name': field_element.name,
+                            'tag': field_element.number,
+                            'type': field_element.type,
+                            'is_empty': field_element.type == 'Empty',
+                            'message_type': field_element.type if field_element.type != 'Empty' else None
+                        })
                 break
 
     # Extract config fields
@@ -183,6 +194,7 @@ def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> 
         'invoke_oneof_name': invoke_oneof_name,
         'report_oneof_name': report_oneof_name,
         'invoke_fields': invoke_fields,
+        'report_fields': report_fields,
         'config_fields': config_fields,
         'config_type': f"msg_{service_name}_config" if config_msg else None,
         'has_config': config_msg is not None
@@ -192,6 +204,9 @@ def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> 
 def render_templates(context: dict, template_dir: str) -> tuple:
     """Render Jinja2 templates using context"""
     env = Environment(loader=FileSystemLoader(template_dir))
+
+    # Add custom filters
+    env.filters['camel_to_snake'] = camel_to_snake
 
     # Render header
     header_template = env.get_template('service.h.jinja')
@@ -278,21 +293,40 @@ def main():
         f.write(impl_content)
     print(f"Generated: {impl_path}")
 
-    # Optionally generate _impl.c template
+    # Optionally generate _impl.c template and private header
     if args.generate_impl:
+        env = Environment(loader=FileSystemLoader(template_dir))
+
+        # Add custom filters
+        env.filters['camel_to_snake'] = camel_to_snake
+
+        # Create private/ subdirectory if it doesn't exist
+        private_dir = os.path.join(args.output_dir, 'private')
+        os.makedirs(private_dir, exist_ok=True)
+
+        # Generate private header (always, contains report helper functions)
+        priv_h_path = os.path.join(private_dir, f"{args.service_name}_priv.h")
+        priv_h_template = env.get_template('service_priv.h.jinja')
+        priv_h_content = priv_h_template.render(**context)
+
+        with open(priv_h_path, 'w') as f:
+            f.write(priv_h_content)
+        print(f"Generated: {priv_h_path}")
+
+        # Generate _impl.c template (only if doesn't exist)
         impl_c_path = os.path.join(args.output_dir, f"{args.service_name}_impl.c")
 
         if os.path.exists(impl_c_path):
-            print(f"\nSkipping: {impl_c_path} already exists (not overwriting)")
+            print(f"Skipping: {impl_c_path} already exists (not overwriting)")
         else:
-            env = Environment(loader=FileSystemLoader(template_dir))
             impl_c_template = env.get_template('service_impl.c.jinja')
             impl_c_content = impl_c_template.render(**context)
 
             with open(impl_c_path, 'w') as f:
                 f.write(impl_c_content)
             print(f"Generated template: {impl_c_path}")
-            print(f"Note: Complete TODO items and remove WARNING comments")
+
+        print(f"\nNote: Complete TODO items in {args.service_name}_impl.c")
     else:
         # Remind about _impl.c
         print(f"\nNote: {args.service_name}_impl.c must be written manually")
