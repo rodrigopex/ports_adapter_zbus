@@ -602,6 +602,7 @@ typedef struct msg_tick_service_invoke {
 3. ✅ **Correct Oneof Field Names** (2026-01-25): Use `invoke_oneof_name` variable instead of hardcoded `service_name` in switch statement
 4. ✅ **Improved Template Implementations** (2026-01-25): Replaced verbose TODOs with actual working implementations for standard functions
 5. ✅ **Private Header Generation** (2026-01-25): Generate `private/<service>_priv.h` with static inline report helper functions
+6. ✅ **CamelCase to snake_case Conversion** (2026-01-25): Fix type name conversion in private header to match nanopb naming conventions
 
 ## Future Enhancements
 
@@ -1144,6 +1145,190 @@ return tick_service_report_status(&status, K_MSEC(250));
 ```
 
 **Result**: 85% reduction in boilerplate code per report call.
+
+---
+
+## Bug Fix: CamelCase to snake_case Conversion in Private Header
+
+**Fixed: 2026-01-25**
+
+### Problem
+
+The private header generation was incorrectly converting CamelCase proto type names to lowercase instead of proper snake_case, causing type mismatches with nanopb-generated types.
+
+**Example Issue** (battery service):
+```proto
+message MsgBatteryService {
+  message BatteryState {
+    uint32 voltage = 1;
+    uint32 percentage = 2;
+  }
+
+  message Report {
+    oneof battery_report {
+      MsgServiceStatus status = 1;
+      Config config = 2;
+      Empty battery_low = 3;
+      BatteryState battery_state = 4;  // <-- CamelCase type
+    }
+  }
+}
+```
+
+**Incorrect Generated Code** (before fix):
+```c
+// Wrong: just lowercased
+static inline int battery_service_report_battery_state(
+    const struct msg_battery_service_batterystate *battery_state,  // WRONG
+    k_timeout_t timeout)
+```
+
+**Nanopb Generated Type** (correct):
+```c
+typedef struct msg_battery_service_battery_state {  // snake_case
+    uint32_t voltage;
+    uint32_t percentage;
+} msg_battery_service_battery_state;
+```
+
+**Result**: Compilation error due to type mismatch:
+```
+error: unknown type name 'msg_battery_service_batterystate'
+note: did you mean 'msg_battery_service_battery_state'?
+```
+
+### Root Cause
+
+The `service_priv.h.jinja` template used the `|lower` Jinja2 filter which only lowercases the string:
+```jinja
+{%- else %}
+static inline int {{ service_name }}_report_{{ field.name }}(
+    const struct msg_{{ service_name }}_{{ field.message_type|lower }} *{{ field.name }},
+    k_timeout_t timeout)
+```
+
+**Problem**: `BatteryState|lower` → `batterystate` (wrong)
+**Expected**: `BatteryState` → `battery_state` (correct snake_case)
+
+### Solution
+
+1. **Add Custom Jinja2 Filter**: Register the existing `camel_to_snake()` function as a Jinja2 filter
+2. **Update Template**: Replace `|lower` filter with `|camel_to_snake` filter
+3. **Apply to Both Environments**: Ensure filter is available in both render contexts
+
+### Implementation
+
+**Modified**: `generate_service.py`
+
+```python
+def render_templates(context: dict, template_dir: str) -> tuple:
+    """Render Jinja2 templates using context"""
+    env = Environment(loader=FileSystemLoader(template_dir))
+
+    # Add custom filters
+    env.filters['camel_to_snake'] = camel_to_snake  # ADDED
+
+    # Render templates...
+```
+
+```python
+# In --generate-impl section
+if args.generate_impl:
+    env = Environment(loader=FileSystemLoader(template_dir))
+
+    # Add custom filters
+    env.filters['camel_to_snake'] = camel_to_snake  # ADDED
+
+    # Generate files...
+```
+
+**Modified**: `templates/service_priv.h.jinja` (line 41)
+
+```jinja
+{%- else %}
+
+static inline int {{ service_name }}_report_{{ field.name }}(
+    const struct msg_{{ service_name }}_{{ field.message_type|camel_to_snake }} *{{ field.name }},
+    k_timeout_t timeout)
+{
+```
+
+**Change**: `{{ field.message_type|lower }}` → `{{ field.message_type|camel_to_snake }}`
+
+### Correct Generated Code (after fix)
+
+```c
+static inline int battery_service_report_battery_state(
+    const struct msg_battery_service_battery_state *battery_state,  // CORRECT
+    k_timeout_t timeout)
+{
+    return zbus_chan_pub(
+        &chan_battery_service_report,
+        &(struct msg_battery_service_report){
+            .which_battery_report = MSG_BATTERY_SERVICE_REPORT_BATTERY_STATE_TAG,
+            .battery_state = *battery_state},
+        timeout);
+}
+```
+
+### Verification
+
+**Test Case**: Battery service with `BatteryState` type
+
+Before fix:
+```bash
+just gen_service_files battery
+# Generated: msg_battery_service_batterystate (wrong)
+just build
+# Error: unknown type name 'msg_battery_service_batterystate'
+```
+
+After fix:
+```bash
+just gen_service_files battery
+# Generated: msg_battery_service_battery_state (correct)
+just build
+# Success: Build completes without errors
+```
+
+### Type Name Conversion Examples
+
+The `camel_to_snake()` function correctly handles various patterns:
+
+| Proto Type Name | Incorrect (|lower) | Correct (|camel_to_snake) |
+|----------------|-------------------|---------------------------|
+| `BatteryState` | `batterystate` | `battery_state` |
+| `TamperStatus` | `tamperstatus` | `tamper_status` |
+| `GPSLocation` | `gpslocation` | `g_p_s_location` |
+| `HTTPRequest` | `httprequest` | `h_t_t_p_request` |
+| `Config` | `config` | `config` (unchanged) |
+| `MsgServiceStatus` | Special case (shared type) | N/A (handled separately) |
+
+### Affected Files
+
+- **Fixed**: `generate_service.py` - Added filter registration
+- **Fixed**: `templates/service_priv.h.jinja` - Changed filter usage
+- **Regenerated**: `modules/services/battery/private/battery_service_priv.h`
+- **Regenerated**: `modules/services/battery/battery_service.h`
+- **Regenerated**: `modules/services/battery/battery_service.c`
+
+### Impact
+
+- **Breaking Change**: No (regeneration required for services with CamelCase types)
+- **Backward Compatible**: Yes (services without CamelCase types unaffected)
+- **Build Status**: Fixed compilation errors for battery service
+- **Other Services**: Tick service (no CamelCase types) remains unaffected
+
+### Success Criteria
+
+✅ CamelCase proto type names converted to proper snake_case
+✅ Generated type names match nanopb naming conventions
+✅ Battery service compiles successfully with BatteryState type
+✅ Filter registered in both render contexts (main and --generate-impl)
+✅ Existing services without CamelCase types unaffected
+✅ Template change is minimal (one character difference: |lower → |camel_to_snake)
+
+---
 
 ### Future Enhancements
 

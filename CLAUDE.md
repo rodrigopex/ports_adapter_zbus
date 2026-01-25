@@ -1070,6 +1070,12 @@ The generator handles three categories of report field types:
    - Parameter: None (only `k_timeout_t timeout`)
    - Usage: No payload field in struct literal
 
+4. **Custom CamelCase types** (e.g., `BatteryState`):
+   - Proto: `BatteryState battery_state = 4;`
+   - Parameter: `const struct msg_<service>_battery_state *battery_state`
+   - Usage: `.battery_state = *battery_state`
+   - Note: CamelCase proto type names are automatically converted to snake_case to match nanopb naming conventions using the `camel_to_snake` Jinja2 filter
+
 **Usage Example** (from tick service):
 
 Proto definition:
@@ -1173,9 +1179,14 @@ const struct msg_tick_service_invoke *ivk;       // nanopb struct with typedef
 nanopb naming conventions:
 - Main message: `MsgTickService.Invoke` → `msg_tick_service_invoke`
 - Nested message: `MsgTickService.Config` → `msg_tick_service_config`
+- CamelCase types: `MsgBatteryService.BatteryState` → `msg_battery_service_battery_state`
 - Enum tags: `MSG_TICK_SERVICE_INVOKE_START_TAG`
 - Oneof field names: Based on the oneof name in proto (e.g., `which_tick_invoke` from `oneof tick_invoke`)
 - Initializers: `MSG_TICK_SERVICE_INVOKE_INIT_DEFAULT`
+
+**Important**: The code generator uses the `camel_to_snake` filter to convert CamelCase proto type names to snake_case, ensuring generated code matches nanopb's naming conventions. For example:
+- Proto type: `BatteryState` → C type: `msg_battery_service_battery_state`
+- Proto type: `GPSLocation` → C type: `msg_<service>_g_p_s_location`
 
 #### Template Customization
 
@@ -1202,6 +1213,29 @@ case MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG:
 ```
 
 Modify templates to change code structure across all services.
+
+**Custom Jinja2 Filters**:
+
+The generator provides custom filters for type name transformations:
+
+- **`|camel_to_snake`**: Converts CamelCase to snake_case (e.g., `BatteryState` → `battery_state`)
+  - Used in `service_priv.h.jinja` for custom message types
+  - Ensures generated type names match nanopb naming conventions
+  - Example: `{{ field.message_type|camel_to_snake }}` produces correct nanopb types
+
+- **`|upper`**: Built-in Jinja2 filter for UPPER_CASE (e.g., `start` → `START`)
+  - Used for enum tag generation
+  - Example: `MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG`
+
+- **`|lower`**: Built-in Jinja2 filter for lowercase (e.g., `Config` → `config`)
+  - Used for variable names and simple type references
+  - Note: Not suitable for CamelCase type names (use `|camel_to_snake` instead)
+
+**Filter Registration** (in `generate_service.py`):
+```python
+env = Environment(loader=FileSystemLoader(template_dir))
+env.filters['camel_to_snake'] = camel_to_snake
+```
 
 #### Generated _impl.c Template Structure
 
