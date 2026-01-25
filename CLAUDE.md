@@ -28,6 +28,9 @@ just config
 # Debug with QEMU
 just debugserver_qemu        # or: just ds
 just attach                  # or: just da (in separate terminal)
+
+# Generate service files from proto
+just gen_service_files <service_name>
 ```
 
 All commands use the `mps2/an385` board by default (ARM Cortex-M3).
@@ -723,7 +726,8 @@ The project includes a Python-based code generator that creates service infrastr
 **What Gets Generated**:
 - `<service>.h`: Service header with data structures, API interface, and inline client functions
 - `<service>.c`: Service infrastructure with channels, dispatcher, and registration
-- `<service>_impl.c` (optional template): Implementation template with TODO comments and proper structure
+- `private/<service>_priv.h` (with `--generate-impl`): Private header with report helper functions
+- `<service>_impl.c` (optional template with `--generate-impl`): Implementation template with TODO comments and proper structure
 
 **What Is Hand-Written** (source of truth):
 - `<service>.proto`: Protobuf message definitions (defines API structure)
@@ -791,11 +795,13 @@ Note: tick_service_impl.c must be written manually
 Parsing ../../new_service/new_service.proto...
 Service: new_service
 Invoke fields: ['start', 'stop', 'config']
+Report fields: ['status', 'config']
 Rendering templates...
 Generated: ../../new_service/new_service.h
 Generated: ../../new_service/new_service.c
+Generated: ../../new_service/private/new_service_priv.h
 Generated template: ../../new_service/new_service_impl.c
-Note: Complete TODO items and remove WARNING comments
+Note: Complete TODO items in _impl.c
 ```
 
 **Important**: The generator will NEVER overwrite an existing `_impl.c` file. If you run with `--generate-impl` on an existing service, it will skip the `_impl.c` file generation.
@@ -808,20 +814,30 @@ Note: Complete TODO items and remove WARNING comments
 
 2. **Generate All Files with Template**:
    ```bash
+   # Using justfile recipe (recommended):
+   just gen_service_files new_service
+
+   # Or manually:
    cd modules/services/shared/codegen
    python3 generate_service.py \
-       --proto ../../new_service/new_service.proto \
+       --proto ../../new_service/new_service_service.proto \
        --output-dir ../../new_service \
-       --service-name new_service \
+       --service-name new_service_service \
        --module-dir new_service \
        --generate-impl
    ```
 
+   This generates:
+   - `new_service/new_service_service.h` - Public API and data structures
+   - `new_service/new_service_service.c` - Infrastructure (channels, dispatcher)
+   - `new_service/private/new_service_service_priv.h` - Report helper functions
+   - `new_service/new_service_service_impl.c` - Implementation template
+
 3. **Complete Implementation** (`<service>_impl.c`):
    - Read TODO comments for guidance on each function
    - Implement business logic with proper spinlock usage
-   - Add zbus_chan_pub calls to report state changes
-   - Remove TODO/WARNING comments when complete
+   - Use private header helper functions to report state changes (e.g., `<service>_report_status()`)
+   - Remove TODO comments when complete
 
 4. **Build and Test**:
    ```bash
@@ -853,6 +869,10 @@ Note: Complete TODO items and remove WARNING comments
 
 2. **Regenerate Infrastructure**:
    ```bash
+   # Using justfile recipe (recommended):
+   just gen_service_files tick
+
+   # Or manually (without --generate-impl to avoid overwriting _impl.c):
    cd modules/services/shared/codegen
    python3 generate_service.py \
        --proto ../../tick/tick_service.proto \
@@ -914,6 +934,7 @@ The generator uses three components:
 2. **Templates** (`templates/`):
    - `service.h.jinja`: Generates service header
    - `service.c.jinja`: Generates service infrastructure
+   - `service_priv.h.jinja`: Generates private header with report helper functions
    - `service_impl.c.jinja`: Generates implementation template with TODO comments (optional)
    - Uses Jinja2 for conditionals, loops, and filters
 
@@ -980,6 +1001,157 @@ case MSG_TICK_SERVICE_INVOKE_START_TAG:
 }
 ```
 
+#### Private Header Generation
+
+When using `--generate-impl`, the generator creates a private header file (`private/<service>_priv.h`) containing static inline helper functions for publishing service reports. This provides a clean, type-safe API for reporting state changes without exposing implementation details in the public header.
+
+**Purpose**:
+- Simplifies report publishing in implementation code
+- Encapsulates zbus channel publishing boilerplate
+- Provides compile-time type checking for report messages
+- Keeps implementation details private (not visible in public `<service>.h`)
+
+**Generated Helper Functions**:
+
+The generator analyzes the Report message's oneof fields and creates a helper function for each field:
+
+```c
+// For shared MsgServiceStatus reports
+static inline int <service>_report_status(const struct msg_service_status *status,
+                                          k_timeout_t timeout)
+{
+    return zbus_chan_pub(
+        &chan_<service>_report,
+        &(struct msg_<service>_report){
+            .which_<report_oneof> = MSG_<SERVICE>_REPORT_STATUS_TAG,
+            .status = *status},
+        timeout);
+}
+
+// For service-specific Config reports
+static inline int <service>_report_config(const struct msg_<service>_config *config,
+                                          k_timeout_t timeout)
+{
+    return zbus_chan_pub(
+        &chan_<service>_report,
+        &(struct msg_<service>_report){
+            .which_<report_oneof> = MSG_<SERVICE>_REPORT_CONFIG_TAG,
+            .config = *config},
+        timeout);
+}
+
+// For Empty reports (events with no data)
+static inline int <service>_report_tick(k_timeout_t timeout)
+{
+    return zbus_chan_pub(
+        &chan_<service>_report,
+        &(struct msg_<service>_report){
+            .which_<report_oneof> = MSG_<SERVICE>_REPORT_TICK_TAG},
+        timeout);
+}
+```
+
+**Type Mapping**:
+
+The generator handles three categories of report field types:
+
+1. **Shared types** (e.g., `MsgServiceStatus`):
+   - Proto: `MsgServiceStatus status = 1;`
+   - Parameter: `const struct msg_service_status *status`
+   - Usage: `.status = *status`
+
+2. **Service-specific types** (e.g., `Config`):
+   - Proto: `Config config = 2;`
+   - Parameter: `const struct msg_<service>_config *config`
+   - Usage: `.config = *config`
+
+3. **Empty types** (events with no payload):
+   - Proto: `Empty tick = 3;`
+   - Parameter: None (only `k_timeout_t timeout`)
+   - Usage: No payload field in struct literal
+
+**Usage Example** (from tick service):
+
+Proto definition:
+```protobuf
+message MsgTickService {
+  message Report {
+    oneof tick_report {
+      MsgServiceStatus status = 1;
+      Config config = 2;
+      Empty tick = 3;
+    }
+  }
+}
+```
+
+Generated helper functions in `private/tick_service_priv.h`:
+```c
+static inline int tick_service_report_status(const struct msg_service_status *status,
+                                             k_timeout_t timeout);
+static inline int tick_service_report_config(const struct msg_tick_service_config *config,
+                                             k_timeout_t timeout);
+static inline int tick_service_report_tick(k_timeout_t timeout);
+```
+
+Implementation usage in `tick_service_impl.c`:
+```c
+#include "tick_service.h"
+#include "private/tick_service_priv.h"  // Include private helpers
+
+static int start(const struct service *service)
+{
+    struct tick_service_data *data = service->data;
+    struct msg_service_status status;
+
+    K_SPINLOCK(&data->lock) {
+        data->status.is_running = true;
+        status = data->status;
+    }
+
+    // Use helper instead of raw zbus_chan_pub
+    return tick_service_report_status(&status, K_MSEC(250));
+}
+
+static int get_config(const struct service *service)
+{
+    struct tick_service_data *data = service->data;
+    struct msg_tick_service_config config;
+
+    K_SPINLOCK(&data->lock) {
+        config = data->config;
+    }
+
+    // Use helper for config reports
+    return tick_service_report_config(&config, K_MSEC(250));
+}
+
+static void timer_handler(struct k_timer *timer)
+{
+    // Use helper for event reports (no parameters)
+    tick_service_report_tick(K_NO_WAIT);
+}
+```
+
+**Benefits**:
+- **Cleaner code**: `tick_service_report_status(&status, timeout)` vs. full `zbus_chan_pub` call
+- **Type safety**: Compiler checks parameter types at call sites
+- **Maintainability**: Changes to report structure only require template updates
+- **Discoverability**: IDE autocomplete shows available report functions
+- **Privacy**: Implementation helpers not exposed in public API
+
+**File Structure**:
+```
+modules/services/<service>/
+├── <service>.h                    # Public API (generated)
+├── <service>.c                    # Infrastructure (generated)
+├── private/
+│   └── <service>_priv.h          # Private helpers (generated)
+└── <service>_impl.c              # Implementation (uses private helpers)
+```
+
+The private header is automatically generated whenever `--generate-impl` is used or when using the `just gen_service_files` recipe.
+
 #### nanopb Type Compliance
 
 Generated code uses nanopb type names with the `struct` keyword as required by C:
@@ -1011,6 +1183,7 @@ Templates are located in `modules/services/shared/codegen/templates/`:
 
 - **`service.h.jinja`**: Header template
 - **`service.c.jinja`**: Infrastructure template
+- **`service_priv.h.jinja`**: Private header template with report helper functions (generated with `--generate-impl`)
 - **`service_impl.c.jinja`**: Implementation template (optional, only generated with `--generate-impl`)
 
 Templates use Jinja2 syntax:
