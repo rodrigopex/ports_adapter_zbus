@@ -60,3 +60,11 @@ attach:
 
 kb arg:
     @fend @no_trailing_newline "{{arg}} << 10" | wl-copy
+
+gen_service_files service_name:
+    python3 modules/services/shared/codegen/generate_service.py \
+    --proto modules/services/{{service_name}}/{{service_name}}_service.proto \
+    --output-dir modules/services/{{service_name}} \
+    --service-name {{service_name}}_service \
+    --module-dir {{service_name}} \
+    --generate-impl
