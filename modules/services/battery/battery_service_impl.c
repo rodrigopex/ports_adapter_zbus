@@ -105,8 +105,14 @@ static int get_events(const struct service *service)
 	K_SPINLOCK(&data->lock) {
 		/* TODO: Implement get_events logic */
 	}
-	/* Streaming RPC - publish events as they occur */
-	/* Example: return battery_service_report_events(event_data, K_NO_WAIT); */
+	/* Output-streaming RPC: publish events from async contexts (timer/IRQ) */
+	/* Pattern example (see tick_service_impl.c:11-18):
+	 *   void timer_handler(struct k_timer *timer) {
+	 *       struct msg_battery_service_events event = {...};
+	 *       battery_service_report_events(&event, K_NO_WAIT);
+	 *   }
+	 */
+	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
 	return 0;
 }
 

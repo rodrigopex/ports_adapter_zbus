@@ -40,6 +40,6 @@ service TickService {
   rpc get_status (Empty) returns (MsgServiceStatus);
   rpc config (MsgTickService.Config) returns (MsgTickService.Config);
   rpc get_config (Empty) returns (MsgTickService.Config);
-  /* This will report the battery events. No need an invokable API */
+  /* This will report the tick events */
   rpc get_events (Empty) returns (stream MsgTickService.Events);
 }

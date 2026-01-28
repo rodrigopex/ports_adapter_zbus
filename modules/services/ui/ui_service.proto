@@ -14,7 +14,11 @@ message MsgUIService {
 
   message Report {
     oneof ui_report {
-      Empty error_code = 1;
+      Empty empty = 1;
     }
   }
+}
+
+service UIService {
+  rpc blink (Empty) returns (Empty);
 }

@@ -52,6 +52,6 @@ service BatteryService {
   rpc config (MsgBatteryService.Config) returns (MsgBatteryService.Config);
   rpc get_config (Empty) returns (MsgBatteryService.Config);
   rpc get_battery_state (Empty) returns (MsgBatteryService.BatteryState);
-  /* This will report the battery events. No need an invokable API */
+  /* This will report the battery events */
   rpc get_events (Empty) returns (stream MsgBatteryService.Events);
 }
