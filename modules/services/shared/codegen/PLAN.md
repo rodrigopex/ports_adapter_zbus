@@ -111,6 +111,15 @@ Parses `service` definition → maps RPC return types to report functions:
 
 Validates RPC methods vs Invoke/Report fields. Fallback to invoke_fields if no service def.
 
+## Stream Semantics
+- **Output streaming**: Server pushes events, no Invoke field needed
+  - Example: `report_events(stream Empty) returns (stream Events)` (tick_service.proto:44)
+  - Pattern: Publish from timer/IRQ handler with K_NO_WAIT
+  - Validation: Skips "no Invoke field" warning
+- **Input streaming**: Client sends stream (placeholder, not yet used)
+- **Flags**: `input_streaming`, `output_streaming` in RPC method context
+- **Template**: Generates timer/work queue pattern examples for output streams
+
 ## Template Filters
 - `camel_to_snake` - BatteryState → battery_state
 - `upper`, `lower`

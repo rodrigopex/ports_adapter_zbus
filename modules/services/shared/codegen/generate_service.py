@@ -114,8 +114,8 @@ def validate_service_consistency(rpc_methods: list, report_fields: list, invoke_
     report_field_names = {f['name'] for f in report_fields}
 
     for method in rpc_methods:
-        # Check Invoke field exists
-        if method['name'] not in invoke_field_names:
+        # Check Invoke field exists (output-streaming RPCs don't need Invoke fields)
+        if method['name'] not in invoke_field_names and not method.get('output_streaming', False):
             print(f"Warning: RPC method '{method['name']}' has no corresponding Invoke field")
 
         # Check Report field exists
@@ -260,13 +260,18 @@ def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> 
                 else:
                     input_type = str(input_type)
 
+                # Extract input streaming flag
+                input_streaming = False
+                if hasattr(input_type, 'stream') and input_type.stream:
+                    input_streaming = True
+
                 # Extract output type name and check for streaming
                 output_type = method_element.output_type
-                is_streaming = False
+                output_streaming = False
 
                 # Check if it's a stream type
                 if hasattr(output_type, 'stream') and output_type.stream:
-                    is_streaming = True
+                    output_streaming = True
 
                 # Get the type name
                 if hasattr(output_type, 'type'):
@@ -287,7 +292,8 @@ def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> 
                     'name': method_element.name,
                     'input_type': input_type,
                     'output_type': output_type_name,
-                    'is_streaming': is_streaming,
+                    'input_streaming': input_streaming,
+                    'output_streaming': output_streaming,
                     'report_field_name': report_field_name,
                 })
 
@@ -378,8 +384,9 @@ def main():
     if context['rpc_methods']:
         print(f"RPC methods: {len(context['rpc_methods'])} found")
         for m in context['rpc_methods']:
-            streaming = " (streaming)" if m['is_streaming'] else ""
-            print(f"  - {m['name']}({m['input_type']}) -> {m['output_type']}{streaming} => report_{m['report_field_name']}()")
+            in_stream = " (stream input)" if m.get('input_streaming') else ""
+            out_stream = " (stream output)" if m.get('output_streaming') else ""
+            print(f"  - {m['name']}({m['input_type']}{in_stream}) -> {m['output_type']}{out_stream} => report_{m['report_field_name']}()")
     if context['has_config']:
         print(f"Config fields: {[f['name'] for f in context['config_fields']]}")
 

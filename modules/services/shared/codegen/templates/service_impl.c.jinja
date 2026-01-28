@@ -146,11 +146,22 @@ static int {{ method.name }}(const struct service *service
 		/* TODO: Implement {{ method.name }} logic */
 	}
 
-{%- if method.is_streaming %}
-	/* Streaming RPC - publish events as they occur */
-	/* Example: return {{ service_name }}_report_{{ method.report_field_name }}(event_data, K_NO_WAIT); */
+{%- if method.output_streaming %}
+	/* Output-streaming RPC: publish events from async contexts (timer/IRQ) */
+	/* Pattern example (see tick_service_impl.c:11-18):
+	 *   void timer_handler(struct k_timer *timer) {
+	 *       struct msg_{{ service_name }}_{{ method.report_field_name }} event = {...};
+	 *       {{ service_name }}_report_{{ method.report_field_name }}(&event, K_NO_WAIT);
+	 *   }
+	 */
+	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
+	return 0;
+{%- elif method.input_streaming %}
+	/* Input-streaming RPC: process stream of input data */
+	/* TODO: Implement stream handler */
 	return 0;
 {%- else %}
+	/* Request-response RPC */
 	/* TODO: Prepare report data and publish */
 	/* return {{ service_name }}_report_{{ method.report_field_name }}(report_data, K_MSEC(250)); */
 	return 0;
