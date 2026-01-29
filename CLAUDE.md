@@ -148,6 +148,6 @@ Script: `modules/services/shared/codegen/generate_adapter.py`. Parses origin pro
 
 **Templates:** `codegen/templates/` - adapter.c.jinja (listener+switch/case+ZBUS macros), adapter_kconfig.jinja (default y, depends on both services)
 
-**Auto-updates:** Kconfig (before `module =`), CMakeLists.txt (after last zephyr_library_sources). Manual fallback on failure.
+**Auto-updates:** Kconfig (before `module =` with proper blank line spacing), CMakeLists.txt (after last zephyr_library_sources). Manual fallback on failure.
 
 **Naming:** File=`<Origin>Service+<Dest>Service_adapter.c`, Config=`CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER`, Listener=`lis_<origin>_to_<dest>_adapter`
