@@ -358,7 +358,15 @@ def update_kconfig(kconfig_path, kconfig_entry):
                 f.write('\n' + kconfig_entry + '\n')
         else:
             # Insert before the found line
+            # Add blank line before entry if previous line is not blank
+            if insert_idx > 0 and lines[insert_idx - 1].strip():
+                lines.insert(insert_idx, '\n')
+                insert_idx += 1
             lines.insert(insert_idx, kconfig_entry + '\n')
+            # Add blank line after entry if next line is module=
+            if insert_idx + 1 < len(lines) and (lines[insert_idx + 1].strip().startswith('module =') or
+                                                  lines[insert_idx + 1].strip().startswith('module=')):
+                lines.insert(insert_idx + 1, '\n')
             with open(kconfig_file, 'w') as f:
                 f.writelines(lines)
 

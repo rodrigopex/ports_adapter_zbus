@@ -18,6 +18,16 @@ config DEBUG_ADAPTER
     default y
     depends on TICK_SERVICE && TAMPER_DETECTION_SERVICE
 
+config BATTERY_TO_STORAGE_ADAPTER
+	bool "From battery to storage service adapter"
+	default y
+	depends on BATTERY_SERVICE && STORAGE_SERVICE
+
+config TICK_TO_STORAGE_ADAPTER
+	bool "From tick to storage service adapter"
+	default y
+	depends on TICK_SERVICE && STORAGE_SERVICE
+
 module = ADAPTERS
 module-str = adapter
 source "subsys/logging/Kconfig.template.log_config"
