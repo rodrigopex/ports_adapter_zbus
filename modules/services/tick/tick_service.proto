@@ -11,7 +11,8 @@ message MsgTickService {
   }
 
   message Events {
-    optional int64 tick = 1;
+    int32 timestamp = 1;
+    optional int64 tick = 2;
   }
 
   message Invoke {

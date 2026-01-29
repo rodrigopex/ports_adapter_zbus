@@ -68,3 +68,38 @@ gen_service_files service_name:
     --service-name {{service_name}}_service \
     --module-dir {{service_name}} \
     --generate-impl
+
+# Create new service (interactive)
+new_service_interactive:
+    copier copy --UNSAFE \
+    modules/services/shared/codegen/zephyr_service_template \
+    modules/services/
+
+# Create new service with name
+new_service service_name:
+    copier copy --UNSAFE --force \
+    --data service_name="{{service_name}}" \
+    --data include_basic_commands=true \
+    --data service_description="{{service_name}} Service Module" \
+    --data author_name="" \
+    modules/services/shared/codegen/zephyr_service_template \
+    modules/services/
+
+# Update service from template
+update_service service_name:
+    @cd modules/services/{{service_name}} && copier update --UNSAFE
+
+# Create new adapter (interactive)
+new_adapter_interactive:
+    python3 modules/services/shared/codegen/generate_adapter.py \
+    --services-path modules/services \
+    --output-dir adapters \
+    --interactive
+
+# Create new adapter with origin and destination
+new_adapter origin dest:
+    python3 modules/services/shared/codegen/generate_adapter.py \
+    --services-path modules/services \
+    --output-dir adapters \
+    --origin {{origin}} \
+    --destination {{dest}}
