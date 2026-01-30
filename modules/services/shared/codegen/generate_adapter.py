@@ -300,7 +300,7 @@ def render_adapter(context, output_dir, templates_dir):
     template = env.get_template('adapter.c.jinja')
     adapter_content = template.render(context)
 
-    adapter_path = Path(output_dir) / f"{context['adapter_name']}.c"
+    adapter_path = Path(output_dir) / "src" / f"{context['adapter_name']}.c"
     adapter_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(adapter_path, 'w') as f:
@@ -390,14 +390,14 @@ def update_cmakelists(cmake_path, adapter_name, adapter_config):
     if not cmake_file.exists():
         print(f"\nWarning: {cmake_path} not found")
         print(f"Manual step required: Add to CMakeLists.txt:")
-        print(f'    zephyr_library_sources_ifdef(CONFIG_{adapter_config} "{adapter_name}.c")')
+        print(f'    zephyr_library_sources_ifdef(CONFIG_{adapter_config} "src/{adapter_name}.c")')
         return False
 
     try:
         with open(cmake_file, 'r') as f:
             lines = f.readlines()
 
-        new_line = f'    zephyr_library_sources_ifdef(CONFIG_{adapter_config} "{adapter_name}.c")\n'
+        new_line = f'    zephyr_library_sources_ifdef(CONFIG_{adapter_config} "src/{adapter_name}.c")\n'
 
         # Check for duplicate
         if any(adapter_name in line for line in lines):
