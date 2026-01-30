@@ -4,8 +4,8 @@
  */
 
 #include "tick/tick_service.pb.h"
-#include "tick_service.h"
-#include "storage_service.h"
+#include "tick_service_interface.h"
+#include "storage_service_interface.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/zbus/zbus.h>

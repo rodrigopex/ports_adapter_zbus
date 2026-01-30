@@ -22,7 +22,7 @@ if(CONFIG_STORAGE_SERVICE)
     zephyr_library()
     zephyr_library_sources(
         ${storage_service_GENERATED_C}
-        ${ZEPHYR_STORAGE_SERVICE_MODULE_DIR}/storage_service_impl.c
+        ${ZEPHYR_STORAGE_SERVICE_MODULE_DIR}/storage_service.c
     )
 
     add_dependencies(${ZEPHYR_CURRENT_LIBRARY} storage_service_codegen)

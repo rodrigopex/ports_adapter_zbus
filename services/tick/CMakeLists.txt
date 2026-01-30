@@ -22,7 +22,7 @@ if(CONFIG_TICK_SERVICE)
     zephyr_library()
     zephyr_library_sources(
         ${tick_service_GENERATED_C}
-        ${ZEPHYR_TICK_SERVICE_MODULE_DIR}/tick_service_impl.c
+        ${ZEPHYR_TICK_SERVICE_MODULE_DIR}/tick_service.c
     )
 
     add_dependencies(${ZEPHYR_CURRENT_LIBRARY} tick_service_codegen)

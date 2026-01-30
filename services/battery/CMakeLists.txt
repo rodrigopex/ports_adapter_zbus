@@ -22,7 +22,7 @@ if(CONFIG_BATTERY_SERVICE)
     zephyr_library()
     zephyr_library_sources(
         ${battery_service_GENERATED_C}
-        ${ZEPHYR_BATTERY_SERVICE_MODULE_DIR}/battery_service_impl.c
+        ${ZEPHYR_BATTERY_SERVICE_MODULE_DIR}/battery_service.c
     )
 
     add_dependencies(${ZEPHYR_CURRENT_LIBRARY} battery_service_codegen)

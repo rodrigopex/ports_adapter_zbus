@@ -4,8 +4,8 @@
  */
 
 #include "battery/battery_service.pb.h"
-#include "battery_service.h"
-#include "storage_service.h"
+#include "battery_service_interface.h"
+#include "storage_service_interface.h"
 
 #include <zephyr/kernel.h>
 #include <zephyr/zbus/zbus.h>

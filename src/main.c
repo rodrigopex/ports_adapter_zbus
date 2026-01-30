@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// #include "battery_service.h"
-#include "tick_service.h"
-// #include "tamper_detection_service.h"
+// #include "battery_service_interface.h"
+#include "tick_service_interface.h"
+// #include "tamper_detection_service_interface.h"
 #include <zephyr/kernel.h>
 
 // static void status_listener_fn(const struct zbus_channel *chan, const void *msg)

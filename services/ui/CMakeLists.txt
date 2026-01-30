@@ -22,7 +22,7 @@ if(CONFIG_UI_SERVICE)
     zephyr_library()
     zephyr_library_sources(
         ${ui_service_GENERATED_C}
-        ${ZEPHYR_UI_SERVICE_MODULE_DIR}/ui_service_impl.c
+        ${ZEPHYR_UI_SERVICE_MODULE_DIR}/ui_service.c
     )
 
     add_dependencies(${ZEPHYR_CURRENT_LIBRARY} ui_service_codegen)
