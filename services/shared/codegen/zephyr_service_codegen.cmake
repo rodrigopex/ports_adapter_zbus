@@ -3,14 +3,14 @@
 # Auto-generates service infrastructure (.h, .c, private/*_priv.h) during build
 
 function(zephyr_service_generate SERVICE_NAME PROTO_FILE)
-  set(CODEGEN_SCRIPT "${CMAKE_SOURCE_DIR}/modules/services/shared/codegen/generate_service.py")
+  set(CODEGEN_SCRIPT "${CMAKE_SOURCE_DIR}/services/shared/codegen/generate_service.py")
   set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
   set(GENERATED_H "${OUTPUT_DIR}/${SERVICE_NAME}.h")
   set(GENERATED_C "${OUTPUT_DIR}/${SERVICE_NAME}.c")
   set(GENERATED_PRIV_H "${OUTPUT_DIR}/private/${SERVICE_NAME}_priv.h")
 
-  file(GLOB TEMPLATE_FILES "${CMAKE_SOURCE_DIR}/modules/services/shared/codegen/templates/*.jinja")
+  file(GLOB TEMPLATE_FILES "${CMAKE_SOURCE_DIR}/services/shared/codegen/templates/*.jinja")
   file(MAKE_DIRECTORY "${OUTPUT_DIR}/private")
 
   # Check if _impl.c exists in source, generate once if missing (bootstrap)

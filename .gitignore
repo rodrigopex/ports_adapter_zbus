@@ -24,10 +24,10 @@ cscope.*
 .dir
 
 # Generated service files (only belong in build directory)
-modules/services/*/*.h
-modules/services/*/*.c
-!modules/services/*/*_impl.c
-modules/services/*/private/
+services/*/*.h
+services/*/*.c
+!services/*/*_impl.c
+services/*/private/
 
 /*.patch
 

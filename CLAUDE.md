@@ -24,7 +24,7 @@ Underlying: `west build -d ./build -b mps2/an385 .`
 
 **Components:**
 
-1. Services (`modules/services/`): Domain logic, no direct dependencies
+1. Services (`services/`): Domain logic, no direct dependencies
 2. Adapters (`adapters/`): Compose services via channel bridging
 3. Main (`src/main.c`): Lifecycle orchestration
 
@@ -63,7 +63,7 @@ Uses `ZBUS_ASYNC_LISTENER_DEFINE()` + `ZBUS_CHAN_ADD_OBS()`. Kconfig toggleable.
 
 ## Build System
 
-**CMakeLists:** Root defines EXTRA_ZEPHYR_MODULES, collects protos, runs nanopb. shared/ exposes `${CMAKE_BINARY_DIR}/modules/services` globally. Each service calls `zephyr_include_directories("${CMAKE_CURRENT_BINARY_DIR}")` after `zephyr_service_generate()`. Self-managed visibility, no manual root updates. Copier template auto-includes pattern.
+**CMakeLists:** Root defines EXTRA_ZEPHYR_MODULES, collects protos, runs nanopb. shared/ exposes `${CMAKE_BINARY_DIR}/services` globally. Each service calls `zephyr_include_directories("${CMAKE_CURRENT_BINARY_DIR}")` after `zephyr_service_generate()`. Self-managed visibility, no manual root updates. Copier template auto-includes pattern.
 
 ## Creating Services
 
@@ -118,7 +118,7 @@ PROTO_FILES_LIST → zephyr_nanopb_sources() → .pb.h/.pb.c (build dir). Don't 
 
 ### Service Generator
 
-Script: `modules/services/shared/codegen/generate_service.py`. Proto → .h/.c/private/*_priv.h/_impl.c template. Never overwrites _impl.c.
+Script: `services/shared/codegen/generate_service.py`. Proto → .h/.c/private/*_priv.h/_impl.c template. Never overwrites _impl.c.
 
 **Generated:** .h (data/API/inline funcs), .c (channels/dispatcher), priv.h (report helpers), _impl.c template
 **Hand-written:** .proto, _impl.c (business logic)
@@ -139,9 +139,9 @@ Script: `modules/services/shared/codegen/generate_service.py`. Proto → .h/.c/p
 
 ### Adapter Generator
 
-Script: `modules/services/shared/codegen/generate_adapter.py`. Parses origin proto (Report fields) + dest proto (Invoke fields) → generates adapter.c + updates Kconfig/CMakeLists.txt.
+Script: `services/shared/codegen/generate_adapter.py`. Parses origin proto (Report fields) + dest proto (Invoke fields) → generates adapter.c + updates Kconfig/CMakeLists.txt.
 
-**Process:** Scans `modules/services/*/` for protos → proto-schema-parser extracts Report/Invoke oneofs → Jinja2 templates (adapter.c.jinja, adapter_kconfig.jinja) → writes files. Duplicate detection, graceful degradation.
+**Process:** Scans `services/*/` for protos → proto-schema-parser extracts Report/Invoke oneofs → Jinja2 templates (adapter.c.jinja, adapter_kconfig.jinja) → writes files. Duplicate detection, graceful degradation.
 
 **Interactive:** User selects report fields to handle. **Non-interactive:** All fields.
 **API suggestions:** Dest Invoke fields → TODO comments (`/* Available ui commands: start, stop */`)

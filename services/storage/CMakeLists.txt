@@ -15,7 +15,7 @@ if(CONFIG_STORAGE_SERVICE)
     target_include_directories(storage_service INTERFACE
         ${ZEPHYR_STORAGE_SERVICE_MODULE_DIR}           # Source (for _impl.c)
         "${CMAKE_CURRENT_BINARY_DIR}"               # Build (for .h/.c/.priv.h)
-        "${CMAKE_BINARY_DIR}/modules/services"      # Build parent (for .pb.h)
+        "${CMAKE_BINARY_DIR}/services"              # Build parent (for .pb.h)
     )
 
     # Add sources: generated (build) + implementation (source)

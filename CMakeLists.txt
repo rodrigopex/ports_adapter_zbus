@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.20.0)
-set(SERVICES_PATH "${CMAKE_SOURCE_DIR}/modules/services")
+set(SERVICES_PATH "${CMAKE_SOURCE_DIR}/services")
 
 # Create a global property to hold the list of proto files across the modules
 # Since we do not have the nanopb loaded in the external module addition time,

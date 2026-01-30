@@ -32,8 +32,8 @@ if(CONFIG_SERVICES)
     zephyr_linker_sources(DATA_SECTIONS service_iterables.ld)
 
     # Expose nanopb parent directory globally (all .pb.h files)
-    zephyr_include_directories("${CMAKE_BINARY_DIR}/modules/services")
+    zephyr_include_directories("${CMAKE_BINARY_DIR}/services")
     # Expose shared service build directory for service.pb.h
-    zephyr_include_directories("${CMAKE_BINARY_DIR}/modules/services/shared")
+    zephyr_include_directories("${CMAKE_BINARY_DIR}/services/shared")
 
 endif()

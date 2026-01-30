@@ -64,8 +64,8 @@ kb arg:
 gen_service_files service_name:
     @echo "Regenerating service files to build directory..."
     @test -d build/modules/{{service_name}}_service || (echo "Error: build/modules/{{service_name}}_service not found. Run 'just b' first." && exit 1)
-    python3 modules/services/shared/codegen/generate_service.py \
-    --proto modules/services/{{service_name}}/{{service_name}}_service.proto \
+    python3 services/shared/codegen/generate_service.py \
+    --proto services/{{service_name}}/{{service_name}}_service.proto \
     --output-dir build/modules/{{service_name}}_service \
     --service-name {{service_name}}_service \
     --module-dir {{service_name}} \
@@ -74,8 +74,8 @@ gen_service_files service_name:
 # Create new service (interactive)
 new_service_interactive:
     copier copy --UNSAFE \
-    modules/services/shared/codegen/zephyr_service_template \
-    modules/services/
+    services/shared/codegen/zephyr_service_template \
+    services/
 
 # Create new service with name
 new_service service_name:
@@ -84,24 +84,24 @@ new_service service_name:
     --data include_basic_commands=true \
     --data service_description="{{service_name}} Service Module" \
     --data author_name="" \
-    modules/services/shared/codegen/zephyr_service_template \
-    modules/services/
+    services/shared/codegen/zephyr_service_template \
+    services/
 
 # Update service from template
 update_service service_name:
-    @cd modules/services/{{service_name}} && copier update --UNSAFE
+    @cd services/{{service_name}} && copier update --UNSAFE
 
 # Create new adapter (interactive)
 new_adapter_interactive:
-    python3 modules/services/shared/codegen/generate_adapter.py \
-    --services-path modules/services \
+    python3 services/shared/codegen/generate_adapter.py \
+    --services-path services \
     --output-dir adapters \
     --interactive
 
 # Create new adapter with origin and destination
 new_adapter origin dest:
-    python3 modules/services/shared/codegen/generate_adapter.py \
-    --services-path modules/services \
+    python3 services/shared/codegen/generate_adapter.py \
+    --services-path services \
     --output-dir adapters \
     --origin {{origin}} \
     --destination {{dest}}
