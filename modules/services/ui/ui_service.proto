@@ -6,19 +6,41 @@ import "service.proto";
 option (nanopb_fileopt).anonymous_oneof = true;
 
 message MsgUIService {
+  message Config {
+    // No configuration needed yet
+  }
+
+  message Events {
+    optional uint32 blink = 1;
+  }
+
   message Invoke {
     oneof ui_invoke {
-      Empty blink = 1;
+      Empty start = 1;
+      Empty stop = 2;
+      Empty get_status = 3;
+      Config config = 4;
+      Empty get_config = 5;
+      Empty get_events = 6;
+      Empty blink = 7;
     }
   }
 
   message Report {
     oneof ui_report {
-      Empty empty = 1;
+      MsgServiceStatus status = 1;
+      Config config = 2;
+      Events events = 3;
     }
   }
 }
 
 service UIService {
+  rpc start (Empty) returns (MsgServiceStatus);
+  rpc stop (Empty) returns (MsgServiceStatus);
+  rpc get_status (Empty) returns (MsgServiceStatus);
+  rpc config (MsgUIService.Config) returns (MsgUIService.Config);
+  rpc get_config (Empty) returns (MsgUIService.Config);
+  rpc get_events (Empty) returns (stream MsgUIService.Events);
   rpc blink (Empty) returns (Empty);
 }

@@ -108,6 +108,7 @@ Parses `service` definition → maps RPC return types to report functions:
 - `returns MsgServiceStatus` → `report_status()`
 - `returns Config` → `report_config()`
 - `returns (stream) Events` → `report_events()`
+- `returns Empty` → no Report field needed (exception)
 
 Validates RPC methods vs Invoke/Report fields. Fallback to invoke_fields if no service def.
 
@@ -126,7 +127,7 @@ Validates RPC methods vs Invoke/Report fields. Fallback to invoke_fields if no s
 
 ## Validation
 - Check RPC methods have Invoke fields
-- Check return types have Report fields
+- Check return types have Report fields (except Empty returns)
 - Warn on inconsistencies
 
 ## CMake Integration

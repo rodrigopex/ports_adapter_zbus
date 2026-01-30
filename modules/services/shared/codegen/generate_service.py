@@ -47,9 +47,76 @@ def camel_to_snake(name: str) -> str:
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
 
+def proto_type_to_snake(type_str: str) -> str:
+    """
+    Extract type name from qualified proto type and convert to snake_case.
+    Examples:
+      - "MsgStorageService.KeyValue" → "key_value"
+      - "KeyValue" → "key_value"
+      - "Empty" → "empty"
+    """
+    # Extract just the type name (after last dot if qualified)
+    type_name = type_str.split('.')[-1] if '.' in type_str else type_str
+    return camel_to_snake(type_name)
+
+
 def snake_to_upper(name: str) -> str:
     """Convert snake_case to UPPER_CASE"""
     return name.upper()
+
+
+def normalize_proto_type(type_str: str, service_name: str) -> str:
+    """
+    Normalize proto types to snake_case for comparison.
+
+    Handles both qualified and unqualified nested types:
+    - "Empty" → "empty"
+    - "MsgServiceStatus" → "msg_service_status"
+    - "MsgTickService.Config" → "config" (nested type uses short form)
+    - "Config" → "config"
+
+    For types nested within the service message (like Config, Events),
+    we use the short form since that's how they appear in Invoke/Report oneofs.
+    """
+    if not type_str:
+        return ""
+
+    # Handle nested types like "MsgTickService.Config"
+    if '.' in type_str:
+        # Extract just the nested type name: "MsgTickService.Config" → "Config"
+        # Then normalize to snake_case
+        nested_type = type_str.split('.')[-1]
+        return camel_to_snake(nested_type).lower()
+
+    # Simple types
+    return camel_to_snake(type_str).lower()
+
+
+def build_type_maps(invoke_fields: list, report_fields: list, service_name: str) -> tuple:
+    """
+    Build type maps for validation.
+
+    Returns:
+        (invoke_map, report_map) where each map is:
+        {field_name: {'type': normalized_type, 'raw_type': original_type, 'is_empty': bool}}
+    """
+    invoke_map = {}
+    for field in invoke_fields:
+        invoke_map[field['name']] = {
+            'type': normalize_proto_type(field['type'], service_name),
+            'raw_type': field['type'],
+            'is_empty': field['is_empty']
+        }
+
+    report_map = {}
+    for field in report_fields:
+        report_map[field['name']] = {
+            'type': normalize_proto_type(field['type'], service_name),
+            'raw_type': field['type'],
+            'is_empty': field['is_empty']
+        }
+
+    return invoke_map, report_map
 
 
 def map_proto_type_to_c(proto_type: str) -> str:
@@ -73,55 +140,111 @@ def map_proto_type_to_c(proto_type: str) -> str:
 
 def extract_report_field_from_return_type(return_type: str, service_name: str, report_fields: list) -> str:
     """
-    Map RPC return type to Report field name.
+    Map RPC return type to Report field name using hybrid lookup+inference.
 
     Examples:
     - "MsgServiceStatus" → "status"
     - "MsgTickService.Config" → "config"
     - "MsgTickService.Events" → "events"
+
+    Strategy:
+    1. Build type-to-name map from Report fields
+    2. Try exact type match first (handles multiple fields with same type)
+    3. Fall back to inference from type name
     """
-    # Strip service prefix and convert to snake_case
+    # Build type-to-name map from Report fields
+    type_map = {}
+    for field in report_fields:
+        normalized = normalize_proto_type(field['type'], service_name)
+        if normalized not in type_map:
+            type_map[normalized] = []
+        type_map[normalized].append(field['name'])
+
+    # Lookup: Try exact type match
+    normalized_output = normalize_proto_type(return_type, service_name)
+    if normalized_output in type_map:
+        matches = type_map[normalized_output]
+        if len(matches) == 1:
+            return matches[0]  # Exact match found
+        # Multiple fields with same type: fall through to inference
+
+    # Fallback: Infer from type name
     if return_type == 'MsgServiceStatus':
         return 'status'
-
-    # Handle service-specific types like "MsgTickService.Config"
-    if return_type.startswith('Msg') and '.' in return_type:
-        # Extract nested type name: "MsgTickService.Config" → "Config"
-        nested_type = return_type.split('.')[-1]
-        # Convert to snake_case and lowercase
-        field_name = camel_to_snake(nested_type).lower()
-    else:
-        # Fallback: convert type name to snake_case
-        field_name = camel_to_snake(return_type).lower()
-
-    # Validate that this field exists in report_fields
-    if not any(f['name'] == field_name for f in report_fields):
-        print(f"Warning: RPC return type '{return_type}' maps to '{field_name}' but no such Report field exists")
-
-    return field_name
+    if return_type == 'Empty':
+        return 'empty'
+    if '.' in return_type:
+        # Extract nested type: "MsgTickService.Config" → "config"
+        return camel_to_snake(return_type.split('.')[-1]).lower()
+    return camel_to_snake(return_type).lower()
 
 
-def validate_service_consistency(rpc_methods: list, report_fields: list, invoke_fields: list) -> None:
+def validate_service_consistency(rpc_methods: list, report_fields: list, invoke_fields: list, service_name: str) -> None:
     """
-    Validate that service definition is consistent:
+    Validate that service definition is consistent with strict type checking:
     1. Each RPC method has a corresponding Invoke oneof field
-    2. Each RPC return type has a corresponding Report oneof field
+    2. RPC input type matches Invoke field type (normalized)
+    3. Each RPC return type has a corresponding Report oneof field
+    4. RPC output type matches Report field type (normalized)
+
+    Raises ValueError on validation failure to fail the build.
     """
     if not rpc_methods:
         return  # No service definition, skip validation
 
-    invoke_field_names = {f['name'] for f in invoke_fields}
-    report_field_names = {f['name'] for f in report_fields}
+    # Build type maps for validation
+    invoke_map, report_map = build_type_maps(invoke_fields, report_fields, service_name)
+
+    errors = []
 
     for method in rpc_methods:
-        # Check Invoke field exists (output-streaming RPCs don't need Invoke fields)
-        if method['name'] not in invoke_field_names and not method.get('output_streaming', False):
-            print(f"Warning: RPC method '{method['name']}' has no corresponding Invoke field")
+        method_name = method['name']
+        input_type = method['input_type']
+        output_type = method['output_type']
+        report_field_name = method['report_field_name']
+        output_streaming = method.get('output_streaming', False)
 
-        # Check Report field exists
-        if method['report_field_name'] not in report_field_names:
-            print(f"Error: RPC method '{method['name']}' returns '{method['output_type']}' "
-                  f"but Report has no field '{method['report_field_name']}'")
+        # 1. Check Invoke field exists (skip for output-streaming RPCs)
+        if not output_streaming:
+            if method_name not in invoke_map:
+                errors.append(
+                    f"RPC method '{method_name}' has no corresponding Invoke oneof field"
+                )
+            else:
+                # 2. Check input type matches Invoke field type
+                invoke_field = invoke_map[method_name]
+                normalized_input = normalize_proto_type(input_type, service_name)
+                if normalized_input != invoke_field['type']:
+                    errors.append(
+                        f"RPC method '{method_name}' input type mismatch:\n"
+                        f"  RPC input: {input_type} (normalized: {normalized_input})\n"
+                        f"  Invoke field '{method_name}' type: {invoke_field['raw_type']} (normalized: {invoke_field['type']})"
+                    )
+
+        # Skip Report validation for Empty returns (no report needed)
+        if output_type == 'Empty' or output_type.endswith('.Empty'):
+            continue
+
+        # 3. Check Report field exists
+        if report_field_name not in report_map:
+            errors.append(
+                f"RPC method '{method_name}' returns '{output_type}' "
+                f"but Report has no field '{report_field_name}'"
+            )
+        else:
+            # 4. Check output type matches Report field type
+            report_field = report_map[report_field_name]
+            normalized_output = normalize_proto_type(output_type, service_name)
+            if normalized_output != report_field['type']:
+                errors.append(
+                    f"RPC method '{method_name}' output type mismatch:\n"
+                    f"  RPC output: {output_type} (normalized: {normalized_output})\n"
+                    f"  Report field '{report_field_name}' type: {report_field['raw_type']} (normalized: {report_field['type']})"
+                )
+
+    if errors:
+        error_msg = "Service validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise ValueError(error_msg)
 
 
 def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> dict:
@@ -297,14 +420,15 @@ def parse_service_proto(proto_path: str, service_name: str, module_dir: str) -> 
                     'report_field_name': report_field_name,
                 })
 
-    # Validate service consistency
-    validate_service_consistency(rpc_methods, report_fields, invoke_fields)
+    # Validate service consistency (raises ValueError on failure)
+    validate_service_consistency(rpc_methods, report_fields, invoke_fields, service_name)
 
     return {
         'service_name': service_name,
         'service_name_upper': snake_to_upper(service_name),
         'service_name_camel': service_msg.name.replace('Msg', '').replace('Service', ''),
         'module_dir': module_dir,
+        'module_name': os.path.basename(module_dir),
         'invoke_oneof_name': invoke_oneof_name,
         'report_oneof_name': report_oneof_name,
         'invoke_fields': invoke_fields,
@@ -322,6 +446,7 @@ def render_templates(context: dict, template_dir: str) -> tuple:
 
     # Add custom filters
     env.filters['camel_to_snake'] = camel_to_snake
+    env.filters['proto_type_to_snake'] = proto_type_to_snake
 
     # Render header
     header_template = env.get_template('service.h.jinja')
@@ -363,6 +488,16 @@ def main():
         action='store_true',
         help='Generate _impl.c template file (only if it does not exist)'
     )
+    parser.add_argument(
+        '--no-generate-impl',
+        action='store_true',
+        help='Skip _impl.c generation (for build-time codegen)'
+    )
+    parser.add_argument(
+        '--impl-only',
+        action='store_true',
+        help='Only generate _impl.c, skip .h/.c/.priv.h (for bootstrap)'
+    )
 
     args = parser.parse_args()
 
@@ -400,32 +535,31 @@ def main():
 
     # Render templates
     print("Rendering templates...")
-    header_content, impl_content = render_templates(context, template_dir)
 
-    # Write header file
-    header_path = os.path.join(args.output_dir, f"{args.service_name}.h")
-    with open(header_path, 'w') as f:
-        f.write(header_content)
-    print(f"Generated: {header_path}")
+    # Skip .h/.c/.priv.h generation if --impl-only is set
+    if not args.impl_only:
+        header_content, impl_content = render_templates(context, template_dir)
 
-    # Write implementation file
-    impl_path = os.path.join(args.output_dir, f"{args.service_name}.c")
-    with open(impl_path, 'w') as f:
-        f.write(impl_content)
-    print(f"Generated: {impl_path}")
+        # Write header file
+        header_path = os.path.join(args.output_dir, f"{args.service_name}.h")
+        with open(header_path, 'w') as f:
+            f.write(header_content)
+        print(f"Generated: {header_path}")
 
-    # Optionally generate _impl.c template and private header
-    if args.generate_impl:
+        # Write implementation file
+        impl_path = os.path.join(args.output_dir, f"{args.service_name}.c")
+        with open(impl_path, 'w') as f:
+            f.write(impl_content)
+        print(f"Generated: {impl_path}")
+
+        # Always generate private header (contains report helper functions used by _impl.c)
         env = Environment(loader=FileSystemLoader(template_dir))
-
-        # Add custom filters
         env.filters['camel_to_snake'] = camel_to_snake
+        env.filters['proto_type_to_snake'] = proto_type_to_snake
 
-        # Create private/ subdirectory if it doesn't exist
         private_dir = os.path.join(args.output_dir, 'private')
         os.makedirs(private_dir, exist_ok=True)
 
-        # Generate private header (always, contains report helper functions)
         priv_h_path = os.path.join(private_dir, f"{args.service_name}_priv.h")
         priv_h_template = env.get_template('service_priv.h.jinja')
         priv_h_content = priv_h_template.render(**context)
@@ -434,7 +568,12 @@ def main():
             f.write(priv_h_content)
         print(f"Generated: {priv_h_path}")
 
-        # Generate _impl.c template (only if doesn't exist)
+    # Generate _impl.c template if --impl-only OR (--generate-impl and not --no-generate-impl)
+    if args.impl_only or (args.generate_impl and not args.no_generate-impl):
+        env = Environment(loader=FileSystemLoader(template_dir))
+        env.filters['camel_to_snake'] = camel_to_snake
+        env.filters['proto_type_to_snake'] = proto_type_to_snake
+
         impl_c_path = os.path.join(args.output_dir, f"{args.service_name}_impl.c")
 
         if os.path.exists(impl_c_path):
@@ -449,9 +588,10 @@ def main():
 
         print(f"\nNote: Complete TODO items in {args.service_name}_impl.c")
     else:
-        # Remind about _impl.c
-        print(f"\nNote: {args.service_name}_impl.c must be written manually")
-        print(f"      Implement functions defined in struct {args.service_name}_api")
+        # Remind about _impl.c if neither flag set
+        if not args.no_generate_impl:
+            print(f"\nNote: {args.service_name}_impl.c must be written manually")
+            print(f"      Implement functions defined in struct {args.service_name}_api")
 
 
 if __name__ == '__main__':
