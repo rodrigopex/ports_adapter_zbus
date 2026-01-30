@@ -42,7 +42,13 @@ RPC methods: Invoke fields exist (except output-stream), return types have Repor
 **Modify:** Edit .proto→regen (no --generate-impl)→update _impl.c→build
 
 ## Principles
-Proto=truth, never edit generated, idempotent regen, _impl.c protected, single-return non-void, nanopb types typedef'd
+- Proto = source of truth
+- Never edit generated files
+- Regeneration safe (idempotent)
+- _impl.c never overwritten
+- Single-return for non-void (no gotos)
+- Multiple returns OK for void
+- Nanopb types: no `struct` prefix, typedef'd
 
 ## Enhancements
 ✅ _impl.c template, priv.h gen, RPC mapping, CamelCase fix, Empty exception (2026-01-29)
