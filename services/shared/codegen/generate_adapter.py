@@ -30,7 +30,7 @@ def snake_to_camel(name):
 
 def discover_services(services_path):
     """
-    Scan modules/services/* for proto files and extract metadata
+    Scan services/* for proto files and extract metadata
     Returns: list of dicts with service metadata
     """
     services = []

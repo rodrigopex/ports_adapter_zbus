@@ -4,7 +4,7 @@
 Proto → .h/.c/private/*_priv.h/_impl.c via proto-schema-parser + Jinja2
 
 ## Location
-`modules/services/shared/codegen/`: generate_service.py, templates/*.jinja
+`services/shared/codegen/`: generate_service.py, templates/*.jinja
 
 ## Usage
 ```bash
