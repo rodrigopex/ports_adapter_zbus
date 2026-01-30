@@ -1,0 +1,16 @@
+config {{ service_name_upper }}_SERVICE
+    bool "{{ service_name }} Service Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the {{ service_name }} Service Module in the build.
+      {{ service_description }}.
+
+if({{ service_name_upper }}_SERVICE)
+
+module = {{ service_name_upper }}_SERVICE
+module-str = {{ service_name_lower }}_service
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

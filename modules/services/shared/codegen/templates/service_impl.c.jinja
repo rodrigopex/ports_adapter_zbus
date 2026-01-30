@@ -71,7 +71,7 @@ static int get_status(const struct service *service)
 /* RPC returns {{ method.output_type }} (status) */
 static int {{ method.name }}(const struct service *service
 {%- if method.input_type != 'Empty' -%}
-, const struct msg_{{ service_name }}_{{ method.input_type|camel_to_snake }} *{{ method.input_type|camel_to_snake }}
+, const struct msg_{{ service_name }}_{{ method.input_type|proto_type_to_snake }} *{{ method.input_type|proto_type_to_snake }}
 {%- endif -%})
 {
 	struct {{ service_name }}_data *data = service->data;
@@ -118,7 +118,7 @@ static int get_config(const struct service *service)
 /* RPC returns {{ method.output_type }} (config) */
 static int {{ method.name }}(const struct service *service
 {%- if method.input_type != 'Empty' -%}
-, const struct msg_{{ service_name }}_{{ method.input_type|camel_to_snake }} *{{ method.input_type|camel_to_snake }}
+, const struct msg_{{ service_name }}_{{ method.input_type|proto_type_to_snake }} *{{ method.input_type|proto_type_to_snake }}
 {%- endif -%})
 {
 	struct {{ service_name }}_data *data = service->data;
@@ -137,7 +137,7 @@ static int {{ method.name }}(const struct service *service
 /* RPC returns {{ method.output_type }} - publish to report field: {{ method.report_field_name }} */
 static int {{ method.name }}(const struct service *service
 {%- if method.input_type != 'Empty' -%}
-, const struct msg_{{ service_name }}_{{ method.input_type|camel_to_snake }} *{{ method.input_type|camel_to_snake }}
+, const struct msg_{{ service_name }}_{{ method.input_type|proto_type_to_snake }} *{{ method.input_type|proto_type_to_snake }}
 {%- endif -%})
 {
 	struct {{ service_name }}_data *data = service->data;

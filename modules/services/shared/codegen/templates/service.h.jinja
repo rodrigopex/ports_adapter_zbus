@@ -5,7 +5,7 @@
 #define _{{ service_name_upper }}_H_
 
 #include "service.h"
-#include "{{ module_dir }}/{{ service_name }}.pb.h"
+#include "{{ module_name }}/{{ service_name }}.pb.h"
 #include <zephyr/zbus/zbus.h>
 
 ZBUS_CHAN_DECLARE(chan_{{ service_name }}_invoke, chan_{{ service_name }}_report);
@@ -24,7 +24,7 @@ struct {{ service_name }}_api {
 	int (*{{ field.name }})(const struct service *service);
 {%- else %}
 	int (*{{ field.name }})(const struct service *service,
-	                        const struct msg_{{ service_name }}_{{ field.message_type|lower }} *{{ field.message_type|lower }});
+	                        const struct msg_{{ service_name }}_{{ field.message_type|camel_to_snake }} *{{ field.message_type|camel_to_snake }});
 {%- endif %}
 {%- endfor %}
 };

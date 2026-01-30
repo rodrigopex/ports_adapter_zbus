@@ -62,12 +62,14 @@ kb arg:
     @fend @no_trailing_newline "{{arg}} << 10" | wl-copy
 
 gen_service_files service_name:
+    @echo "Regenerating service files to build directory..."
+    @test -d build/modules/{{service_name}}_service || (echo "Error: build/modules/{{service_name}}_service not found. Run 'just b' first." && exit 1)
     python3 modules/services/shared/codegen/generate_service.py \
     --proto modules/services/{{service_name}}/{{service_name}}_service.proto \
-    --output-dir modules/services/{{service_name}} \
+    --output-dir build/modules/{{service_name}}_service \
     --service-name {{service_name}}_service \
     --module-dir {{service_name}} \
-    --generate-impl
+    --no-generate-impl
 
 # Create new service (interactive)
 new_service_interactive:

@@ -43,18 +43,11 @@ static int stop(const struct service *service)
 	struct msg_service_status status;
 
 	K_SPINLOCK(&data->lock) {
+		data->status.is_running = false;
 		status = data->status;
 	}
 
-	if (!status.is_running) {
-		LOG_DBG("Service has not started yet!");
-	}
-
 	k_timer_stop(&timer_tick_service);
-
-	K_SPINLOCK(&data->lock) {
-		data->status.is_running = false;
-	}
 
 	LOG_DBG("Service stopped!");
 
@@ -97,12 +90,25 @@ static int get_config(const struct service *service)
 	return tick_service_report_config(&config, K_MSEC(250));
 }
 
+/* RPC returns MsgBatteryService.Events - publish to report field: events */
+static int get_events(const struct service *service)
+{
+	struct tick_service_data *data = service->data;
+
+	K_SPINLOCK(&data->lock) {
+		/* TODO: Implement get_events logic */
+	}
+	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
+	return 0;
+}
+
 static struct tick_service_api api = {
 	.start = start,
 	.stop = stop,
 	.get_status = get_status,
 	.config = config,
 	.get_config = get_config,
+	.get_events = get_events,
 };
 
 static struct tick_service_data data = {.config = MSG_TICK_SERVICE_CONFIG_INIT_ZERO,

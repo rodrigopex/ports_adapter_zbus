@@ -1,4 +1,4 @@
-name: tamper_detection_service
+name: storage_service
 build:
   cmake: .
   kconfig: Kconfig

@@ -1,0 +1,16 @@
+config STORAGE_SERVICE
+    bool "Storage Service Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the Storage Service Module in the build.
+      Storage Service Module.
+
+if(STORAGE_SERVICE)
+
+module = STORAGE_SERVICE
+module-str = storage_service
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

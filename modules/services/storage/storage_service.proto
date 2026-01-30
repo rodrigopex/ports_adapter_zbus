@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+import "service.proto";
+
+option (nanopb_fileopt).anonymous_oneof = true;
+
+message MsgStorageService {
+    message Config {
+        // TODO: Add configuration fields specific to Storage
+    }
+
+    message Events {
+        // TODO: Add event fields specific to Storage
+    }
+
+    message KeyValue {
+        string key = 1 [(nanopb).max_size = 32];
+        bytes value = 2 [(nanopb).max_size = 256];
+        int32 value_size = 3;
+    }
+
+    message Invoke {
+        oneof storage_invoke {
+            Empty start = 1;
+            Empty stop = 2;
+            Empty get_status = 3;
+            Config config = 4;
+            Empty get_config = 5;
+            Empty get_events = 6;
+            KeyValue store = 7;
+        }
+    }
+
+    message Report {
+        oneof storage_report {
+            MsgServiceStatus status = 1;
+            Config config = 2;
+            Events events = 3;
+        }
+    }
+}
+
+service StorageService {
+
+    rpc start (Empty) returns (MsgServiceStatus);
+    rpc stop (Empty) returns (MsgServiceStatus);
+    rpc get_status (Empty) returns (MsgServiceStatus);
+    rpc config (MsgStorageService.Config) returns (MsgStorageService.Config);
+    rpc get_config (Empty) returns (MsgStorageService.Config);
+    rpc store (MsgStorageService.KeyValue) returns (Empty);
+    /* This will report the storage events */
+    rpc get_events (Empty) returns (stream MsgStorageService.Events);
+
+}

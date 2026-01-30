@@ -23,6 +23,12 @@ build*/
 cscope.*
 .dir
 
+# Generated service files (only belong in build directory)
+modules/services/*/*.h
+modules/services/*/*.c
+!modules/services/*/*_impl.c
+modules/services/*/private/
+
 /*.patch
 
 # The .cache directory will be used to cache toolchain capabilities if
@@ -124,3 +130,4 @@ ZephyrModuleFile.txt
 
 # Node dependecies
 node_modules
+__pycache__

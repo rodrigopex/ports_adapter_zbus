@@ -1,0 +1,141 @@
+/* TODO: Complete implementation and remove this header when done */
+
+#include "{{ service_name_lower }}/{{ service_name_lower }}_service.pb.h"
+#include "{{ service_name_lower }}_service.h"
+
+#include "private/{{ service_name_lower }}_service_priv.h"
+#include "zephyr/kernel.h"
+#include "zephyr/zbus/zbus.h"
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_DECLARE({{ service_name_lower }}_service, CONFIG_{{ service_name_upper }}_SERVICE_LOG_LEVEL);
+
+{% if include_basic_commands %}
+void {{ service_name_lower }}_service_handler(struct k_timer *timer_id)
+{
+	LOG_DBG("{{ service_name_lower }} tick!");
+
+	struct msg_{{ service_name_lower }}_service_events events = {/* TODO: Set event fields */};
+
+	{{ service_name_lower }}_service_report_events(&events, K_NO_WAIT);
+}
+
+K_TIMER_DEFINE(timer_{{ service_name_lower }}_service, {{ service_name_lower }}_service_handler, NULL);
+{% endif %}
+
+{% if include_basic_commands %}
+static int start(const struct service *service)
+{
+	struct {{ service_name_lower }}_service_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = true;
+		status = data->status;
+	}
+
+	/* TODO: Start service resources (timers, threads, etc.) */
+
+	return {{ service_name_lower }}_service_report_status(&status, K_MSEC(250));
+}
+
+static int stop(const struct service *service)
+{
+	struct {{ service_name_lower }}_service_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		status = data->status;
+	}
+
+	if (!status.is_running) {
+		LOG_DBG("Service has not started yet!");
+	}
+
+	/* TODO: Stop service resources (timers, threads, etc.) */
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = false;
+	}
+
+	return {{ service_name_lower }}_service_report_status(&status, K_MSEC(250));
+}
+
+static int get_status(const struct service *service)
+{
+	struct {{ service_name_lower }}_service_data *data = service->data;
+	struct msg_service_status status;
+
+	K_SPINLOCK(&data->lock) {
+		status = data->status;
+	}
+
+	return {{ service_name_lower }}_service_report_status(&status, K_MSEC(250));
+}
+
+static int config(const struct service *service, const struct msg_{{ service_name_lower }}_service_config *config)
+{
+	struct {{ service_name_lower }}_service_data *data = service->data;
+
+	K_SPINLOCK(&data->lock) {
+		data->config = *config;
+	}
+
+	/* TODO: Apply configuration changes to service resources */
+
+	return {{ service_name_lower }}_service_report_config(config, K_MSEC(250));
+}
+
+static int get_config(const struct service *service)
+{
+	struct {{ service_name_lower }}_service_data *data = service->data;
+	struct msg_{{ service_name_lower }}_service_config config;
+
+	K_SPINLOCK(&data->lock) {
+		config = data->config;
+	}
+
+	return {{ service_name_lower }}_service_report_config(&config, K_MSEC(250));
+}
+
+static int get_events(const struct service *service)
+{
+	struct {{ service_name_lower }}_service_data *data = service->data;
+
+	K_SPINLOCK(&data->lock) {
+		/* TODO: Implement get_events logic */
+	}
+	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
+	return 0;
+}
+{% endif %}
+
+/* TODO: Add custom RPC method implementations here */
+
+static struct {{ service_name_lower }}_service_api api = {
+{% if include_basic_commands %}
+	.start = start,
+	.stop = stop,
+	.get_status = get_status,
+	.config = config,
+	.get_config = get_config,
+	.get_events = get_events,
+{% endif %}
+	/* TODO: Add custom RPC method pointers */
+};
+
+static struct {{ service_name_lower }}_service_data data = {
+	.config = MSG_{{ service_name_upper }}_SERVICE_CONFIG_INIT_ZERO,
+	.status = {.is_running = false}
+};
+
+int {{ service_name_lower }}_service_init_fn(const struct service *self)
+{
+	int err = {{ service_name_lower }}_service_set_implementation(self);
+
+	printk("   -> %s initialed with%s error\n", self->name, err == 0 ? " no" : "");
+
+	return err;
+}
+
+SERVICE_DEFINE({{ service_name_lower }}_service, {{ service_name_lower }}_service_init_fn, &api, &data);

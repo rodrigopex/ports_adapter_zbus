@@ -13,8 +13,8 @@ set(EXTRA_ZEPHYR_MODULES
     "${SERVICES_PATH}/shared"
     "${SERVICES_PATH}/ui"
     "${SERVICES_PATH}/tick"
-    "${SERVICES_PATH}/tamper_detection"
     "${SERVICES_PATH}/battery"
+    "${SERVICES_PATH}/storage"
 )
 message(WARNING "Extra Zephyr Modules Path: ${EXTRA_ZEPHYR_MODULES}")
 
@@ -26,9 +26,6 @@ list(APPEND CMAKE_MODULE_PATH ${ZEPHYR_BASE}/modules/nanopb)
 include(nanopb)
 
 set(NANOPB_OPTIONS "--c-style")
-
-zephyr_include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/services/")
-zephyr_include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/services/shared")
 
 # Retrieve the list of proto files from the global property
 get_property(LOCAL_PROTO_FILES_LIST GLOBAL PROPERTY PROTO_FILES_LIST)

@@ -19,6 +19,7 @@ message MsgBatteryService {
 
     message Events {
       int32 timestamp = 1;
+      optional bool low_batter = 2;
     }
 
     message Invoke {
