@@ -1,18 +1,18 @@
 /* GENERATED FILE - DO NOT EDIT */
 /* Complete TODO items and remove this header when implementation is done */
 
-#include "battery_service.h"
+#include "storage_service_interface.h"
 
-#include "private/battery_service_priv.h"
+#include "storage_service.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_DECLARE(battery_service, CONFIG_BATTERY_SERVICE_LOG_LEVEL);
+LOG_MODULE_DECLARE(storage_service, CONFIG_STORAGE_SERVICE_LOG_LEVEL);
 
 /* TODO: Add service-specific resources (timers, work queues, threads) */
 static int start(const struct service *service)
 {
-	struct battery_service_data *data = service->data;
+	struct storage_service_data *data = service->data;
 	struct msg_service_status status;
 
 	K_SPINLOCK(&data->lock) {
@@ -22,12 +22,12 @@ static int start(const struct service *service)
 
 	/* TODO: Start service resources (timers, threads, etc.) */
 
-	return battery_service_report_status(&status, K_MSEC(250));
+	return storage_service_report_status(&status, K_MSEC(250));
 }
 
 static int stop(const struct service *service)
 {
-	struct battery_service_data *data = service->data;
+	struct storage_service_data *data = service->data;
 	struct msg_service_status status;
 
 	K_SPINLOCK(&data->lock) {
@@ -44,24 +44,24 @@ static int stop(const struct service *service)
 		data->status.is_running = false;
 	}
 
-	return battery_service_report_status(&status, K_MSEC(250));
+	return storage_service_report_status(&status, K_MSEC(250));
 }
 
 static int get_status(const struct service *service)
 {
-	struct battery_service_data *data = service->data;
+	struct storage_service_data *data = service->data;
 	struct msg_service_status status;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
-	return battery_service_report_status(&status, K_MSEC(250));
+	return storage_service_report_status(&status, K_MSEC(250));
 }
 
-static int config(const struct service *service, const struct msg_battery_service_config *config)
+static int config(const struct service *service, const struct msg_storage_service_config *config)
 {
-	struct battery_service_data *data = service->data;
+	struct storage_service_data *data = service->data;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
@@ -69,38 +69,39 @@ static int config(const struct service *service, const struct msg_battery_servic
 
 	/* TODO: Apply configuration changes to service resources */
 
-	return battery_service_report_config(config, K_MSEC(250));
+	return storage_service_report_config(config, K_MSEC(250));
 }
 
 static int get_config(const struct service *service)
 {
-	struct battery_service_data *data = service->data;
-	struct msg_battery_service_config config;
+	struct storage_service_data *data = service->data;
+	struct msg_storage_service_config config;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
-	return battery_service_report_config(&config, K_MSEC(250));
+	return storage_service_report_config(&config, K_MSEC(250));
 }
 
-/* RPC returns MsgBatteryService.BatteryState - publish to report field: battery_state */
-static int get_battery_state(const struct service *service)
+/* RPC returns MsgServiceStatus (status) */
+static int store(const struct service *service, const struct msg_storage_service_key_value *key_value)
 {
-	struct battery_service_data *data = service->data;
+	struct storage_service_data *data = service->data;
+	struct msg_service_status status;
 
 	K_SPINLOCK(&data->lock) {
-		/* TODO: Implement get_battery_state logic */
+		/* TODO: Implement store logic */
+		status = data->status;
 	}
-	/* TODO: Prepare report data and publish */
-	/* return battery_service_report_battery_state(report_data, K_MSEC(250)); */
-	return 0;
+
+	return storage_service_report_status(&status, K_MSEC(250));
 }
 
-/* RPC returns MsgBatteryService.Events - publish to report field: events */
+/* RPC returns MsgStorageService.Events - publish to report field: events */
 static int get_events(const struct service *service)
 {
-	struct battery_service_data *data = service->data;
+	struct storage_service_data *data = service->data;
 
 	K_SPINLOCK(&data->lock) {
 		/* TODO: Implement get_events logic */
@@ -108,36 +109,36 @@ static int get_events(const struct service *service)
 	/* Output-streaming RPC: publish events from async contexts (timer/IRQ) */
 	/* Pattern example (see tick_service_impl.c:11-18):
 	 *   void timer_handler(struct k_timer *timer) {
-	 *       struct msg_battery_service_events event = {...};
-	 *       battery_service_report_events(&event, K_NO_WAIT);
+	 *       struct msg_storage_service_events event = {...};
+	 *       storage_service_report_events(&event, K_NO_WAIT);
 	 *   }
 	 */
 	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
 	return 0;
 }
 
-static struct battery_service_api api = {
+static struct storage_service_api api = {
 	.start = start,
 	.stop = stop,
 	.get_status = get_status,
 	.config = config,
 	.get_config = get_config,
-	.get_battery_state = get_battery_state,
+	.store = store,
 	.get_events = get_events,
 };
 
-static struct battery_service_data data = {
-	.config = MSG_BATTERY_SERVICE_CONFIG_INIT_ZERO,
+static struct storage_service_data data = {
+	.config = MSG_STORAGE_SERVICE_CONFIG_INIT_ZERO,
 	.status = {.is_running = false}
 };
 
-int battery_service_init_fn(const struct service *self)
+int storage_service_init_fn(const struct service *self)
 {
-	int err = battery_service_set_implementation(self);
+	int err = storage_service_set_implementation(self);
 
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 
 	return err;
 }
 
-SERVICE_DEFINE(battery_service, battery_service_init_fn, &api, &data);
+SERVICE_DEFINE(storage_service, storage_service_init_fn, &api, &data);

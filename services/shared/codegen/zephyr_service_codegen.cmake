@@ -6,17 +6,16 @@ function(zephyr_service_generate SERVICE_NAME PROTO_FILE)
   set(CODEGEN_SCRIPT "${CMAKE_SOURCE_DIR}/services/shared/codegen/generate_service.py")
   set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-  set(GENERATED_H "${OUTPUT_DIR}/${SERVICE_NAME}.h")
-  set(GENERATED_C "${OUTPUT_DIR}/${SERVICE_NAME}.c")
-  set(GENERATED_PRIV_H "${OUTPUT_DIR}/private/${SERVICE_NAME}_priv.h")
+  set(GENERATED_H "${OUTPUT_DIR}/${SERVICE_NAME}_interface.h")
+  set(GENERATED_C "${OUTPUT_DIR}/${SERVICE_NAME}_interface.c")
+  set(GENERATED_PRIV_H "${OUTPUT_DIR}/${SERVICE_NAME}.h")
 
   file(GLOB TEMPLATE_FILES "${CMAKE_SOURCE_DIR}/services/shared/codegen/templates/*.jinja")
-  file(MAKE_DIRECTORY "${OUTPUT_DIR}/private")
 
-  # Check if _impl.c exists in source, generate once if missing (bootstrap)
-  set(IMPL_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${SERVICE_NAME}_impl.c")
+  # Check if .c exists in source, generate once if missing (bootstrap)
+  set(IMPL_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${SERVICE_NAME}.c")
   if(NOT EXISTS ${IMPL_FILE})
-    message(STATUS "Bootstrapping ${SERVICE_NAME}_impl.c (one-time generation)")
+    message(STATUS "Bootstrapping ${SERVICE_NAME}.c (one-time generation)")
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} ${CODEGEN_SCRIPT}
         --proto ${PROTO_FILE}
@@ -28,7 +27,7 @@ function(zephyr_service_generate SERVICE_NAME PROTO_FILE)
       RESULT_VARIABLE BOOTSTRAP_RESULT
     )
     if(NOT BOOTSTRAP_RESULT EQUAL 0)
-      message(FATAL_ERROR "Failed to bootstrap ${SERVICE_NAME}_impl.c")
+      message(FATAL_ERROR "Failed to bootstrap ${SERVICE_NAME}.c")
     endif()
   endif()
 

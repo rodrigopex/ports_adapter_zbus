@@ -1,9 +1,9 @@
 /* GENERATED FILE - DO NOT EDIT */
 /* Complete TODO items and remove this header when implementation is done */
 
-#include "ui_service.h"
+#include "ui_service_interface.h"
 
-#include "private/ui_service_priv.h"
+#include "ui_service.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 

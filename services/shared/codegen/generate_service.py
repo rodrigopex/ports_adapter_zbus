@@ -541,32 +541,29 @@ def main():
         header_content, impl_content = render_templates(context, template_dir)
 
         # Write header file
-        header_path = os.path.join(args.output_dir, f"{args.service_name}.h")
+        header_path = os.path.join(args.output_dir, f"{args.service_name}_interface.h")
         with open(header_path, 'w') as f:
             f.write(header_content)
         print(f"Generated: {header_path}")
 
         # Write implementation file
-        impl_path = os.path.join(args.output_dir, f"{args.service_name}.c")
+        impl_path = os.path.join(args.output_dir, f"{args.service_name}_interface.c")
         with open(impl_path, 'w') as f:
             f.write(impl_content)
         print(f"Generated: {impl_path}")
 
-        # Always generate private header (contains report helper functions used by _impl.c)
+        # Always generate helper header (contains report helper functions used by .c)
         env = Environment(loader=FileSystemLoader(template_dir))
         env.filters['camel_to_snake'] = camel_to_snake
         env.filters['proto_type_to_snake'] = proto_type_to_snake
 
-        private_dir = os.path.join(args.output_dir, 'private')
-        os.makedirs(private_dir, exist_ok=True)
-
-        priv_h_path = os.path.join(private_dir, f"{args.service_name}_priv.h")
+        helper_h_path = os.path.join(args.output_dir, f"{args.service_name}.h")
         priv_h_template = env.get_template('service_priv.h.jinja')
-        priv_h_content = priv_h_template.render(**context)
+        helper_h_content = priv_h_template.render(**context)
 
-        with open(priv_h_path, 'w') as f:
-            f.write(priv_h_content)
-        print(f"Generated: {priv_h_path}")
+        with open(helper_h_path, 'w') as f:
+            f.write(helper_h_content)
+        print(f"Generated: {helper_h_path}")
 
     # Generate _impl.c template if --impl-only OR (--generate-impl and not --no-generate-impl)
     if args.impl_only or (args.generate_impl and not args.no_generate-impl):
@@ -574,7 +571,7 @@ def main():
         env.filters['camel_to_snake'] = camel_to_snake
         env.filters['proto_type_to_snake'] = proto_type_to_snake
 
-        impl_c_path = os.path.join(args.output_dir, f"{args.service_name}_impl.c")
+        impl_c_path = os.path.join(args.output_dir, f"{args.service_name}.c")
 
         if os.path.exists(impl_c_path):
             print(f"Skipping: {impl_c_path} already exists (not overwriting)")
@@ -586,7 +583,7 @@ def main():
                 f.write(impl_c_content)
             print(f"Generated template: {impl_c_path}")
 
-        print(f"\nNote: Complete TODO items in {args.service_name}_impl.c")
+        print(f"\nNote: Complete TODO items in {args.service_name}.c")
     else:
         # Remind about _impl.c if neither flag set
         if not args.no_generate_impl:

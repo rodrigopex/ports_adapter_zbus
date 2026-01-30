@@ -1,7 +1,7 @@
 #include "tick/tick_service.pb.h"
-#include "tick_service.h"
+#include "tick_service_interface.h"
 
-#include "private/tick_service_priv.h"
+#include "tick_service.h"
 #include "zephyr/kernel.h"
 #include "zephyr/zbus/zbus.h"
 #include <zephyr/logging/log.h>

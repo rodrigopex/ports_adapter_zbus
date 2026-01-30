@@ -36,11 +36,11 @@ Services listen (sync/async), publish to report channel.
 
 ### Service Structure
 
-**Three files:** .h (data/API/inline funcs), .c (channels/dispatcher/registration), _impl.c (logic). Plus: .proto, CMakeLists, Kconfig, module.yml
+**Three files:** _interface.h (data/API/inline funcs), _interface.c (channels/dispatcher/registration), .c (logic). Plus: .proto, CMakeLists, Kconfig, module.yml
 
-**.h:** `<service>_data` (state+spinlock), `<service>_api` (func ptrs), inline `<service>_start(timeout)` → pub invoke chan
-**.c:** Dispatcher (switch/case oneof tags), `<service>_set_implementation()`
-**_impl.c:** Logic, K_SPINLOCK updates, pub reports, ends with `SERVICE_DEFINE(<service>, init_fn, &api, &data)`
+**_interface.h:** `<service>_data` (state+spinlock), `<service>_api` (func ptrs), inline `<service>_start(timeout)` → pub invoke chan
+**_interface.c:** Dispatcher (switch/case oneof tags), `<service>_set_implementation()`
+**.c:** Logic, K_SPINLOCK updates, pub reports, ends with `SERVICE_DEFINE(<service>, init_fn, &api, &data)`
 **Shared:** `struct service` + `SERVICE_DEFINE()` → `STRUCT_SECTION_ITERABLE` discovery
 
 ### Services
@@ -67,11 +67,11 @@ Uses `ZBUS_ASYNC_LISTENER_DEFINE()` + `ZBUS_CHAN_ADD_OBS()`. Kconfig toggleable.
 
 ## Creating Services
 
-**Workflow:** `just new_service_interactive` → Copier creates .proto/_impl.c/CMakeLists/Kconfig/module.yml → Edit .proto (Config/Events/RPCs) → Edit _impl.c (TODOs) → Add to root CMakeLists EXTRA_ZEPHYR_MODULES → Enable CONFIG_<SERVICE>_SERVICE=y → `just c b r`
+**Workflow:** `just new_service_interactive` → Copier creates .proto/.c/CMakeLists/Kconfig/module.yml → Edit .proto (Config/Events/RPCs) → Edit .c (TODOs) → Add to root CMakeLists EXTRA_ZEPHYR_MODULES → Enable CONFIG_<SERVICE>_SERVICE=y → `just c b r`
 
-**Build-time codegen:** .proto changes → auto-regen .h/.c/.priv.h/.pb.h/.pb.c (like nanopb). Manual: `just gen_service_files <service>`
+**Build-time codegen:** .proto changes → auto-regen _interface.h/_interface.c/<service>.h/.pb.h/.pb.c (like nanopb). Manual: `just gen_service_files <service>`
 
-**Files:** VCS: .proto, _impl.c, CMakeLists, Kconfig, module.yml. Build: .h, .c, private/*_priv.h, .pb.h, .pb.c
+**Files:** VCS: .proto, .c, CMakeLists, Kconfig, module.yml. Build: _interface.h, _interface.c, <service>.h, .pb.h, .pb.c
 
 ## Creating Adapters
 
@@ -94,7 +94,7 @@ Current: All services + debug logging enabled.
 
 ## Naming
 
-- **Files:** `<service>.h/.c/_impl.c/.proto`, `<Origin>+<Destiny>_adapter.c`
+- **Files:** `<service>_service_interface.h/_interface.c/.c/.proto`, `<Origin>+<Destiny>_adapter.c`
 - **Channels:** `chan_<service>_{invoke|report}`
 - **Listeners:** `lis_<service>`, `lis_<origin>_to_<destiny>_adapter`
 - **Messages:** `msg_<service>_{invoke|report}` (proto-generated)
@@ -118,20 +118,20 @@ PROTO_FILES_LIST → zephyr_nanopb_sources() → .pb.h/.pb.c (build dir). Don't 
 
 ### Service Generator
 
-Script: `services/shared/codegen/generate_service.py`. Proto → .h/.c/private/*_priv.h/_impl.c template. Never overwrites _impl.c.
+Script: `services/shared/codegen/generate_service.py`. Proto → _interface.h/_interface.c/<service>.h/.c template. Never overwrites .c.
 
-**Generated:** .h (data/API/inline funcs), .c (channels/dispatcher), priv.h (report helpers), _impl.c template
-**Hand-written:** .proto, _impl.c (business logic)
+**Generated:** _interface.h (data/API/inline funcs), _interface.c (channels/dispatcher), <service>.h (report helpers), .c template
+**Hand-written:** .proto, .c (business logic)
 
 **Workflow:**
-- New: Write .proto → `just gen_service_files <s>` → complete _impl.c → build
-- Modify: Edit .proto → regen (no --generate-impl) → update _impl.c → build
+- New: Write .proto → `just gen_service_files <s>` → complete .c → build
+- Modify: Edit .proto → regen (no --generate-impl) → update .c → build
 
 **Process:** proto-schema-parser extracts service/invoke/report/config → Jinja2 templates (service.h/c/priv.h/impl.c.jinja) → files. Proto oneof → API func ptrs + inline funcs + dispatcher switch/case.
 
 **RPC mapping:** `returns MsgServiceStatus` → `report_status()`, `returns Config` → `report_config()`, `returns Events (stream)` → `report_events()`. Validates RPC vs Invoke/Report fields.
 
-**Private header:** `private/<service>_priv.h` with `<service>_report_*()` helpers. Wraps zbus_chan_pub. Type mapping: MsgServiceStatus→ptr, Config→ptr, Empty→no params, CamelCase→snake_case.
+**Helper header:** `<service>.h` with `<service>_report_*()` helpers. Wraps zbus_chan_pub. Type mapping: MsgServiceStatus→ptr, Config→ptr, Empty→no params, CamelCase→snake_case.
 
 **nanopb types:** Use `struct msg_<service>_{invoke|report|config}`. Naming: `MsgService.Invoke` → `msg_service_invoke`, tags: `MSG_SERVICE_INVOKE_START_TAG`, oneof: `which_<oneof_name>`.
 
