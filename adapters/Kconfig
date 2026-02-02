@@ -11,27 +11,27 @@ if(ADAPTERS)
 config TICK_TO_UI_ADAPTER
     bool "From tick to ui zephlet adapter"
     default y
-    depends on TICK_ZEPHLET && UI_ZEPHLET
+    depends on ZEPHLET_TICK && ZEPHLET_UI
 
 config DEBUG_ADAPTER
     bool "From any to main zephlet adapter"
     default y
-    depends on TICK_ZEPHLET && TAMPER_DETECTION_ZEPHLET
+    depends on ZEPHLET_TICK && ZEPHLET_TAMPER_DETECTION
 
 config BATTERY_TO_STORAGE_ADAPTER
 	bool "From battery to storage zephlet adapter"
 	default y
-	depends on BATTERY_ZEPHLET && STORAGE_ZEPHLET
+	depends on ZEPHLET_BATTERY && ZEPHLET_STORAGE
 
 config TICK_TO_STORAGE_ADAPTER
 	bool "From tick to storage zephlet adapter"
 	default y
-	depends on TICK_ZEPHLET && STORAGE_ZEPHLET
+	depends on ZEPHLET_TICK && ZEPHLET_STORAGE
 
 config POSITION_TO_BATTERY_ADAPTER
-	bool "From  to  service adapter"
+	bool "From position to battery zephlet adapter"
 	default y
-	depends on _SERVICE && _SERVICE
+	depends on ZEPHLET_POSITION && ZEPHLET_BATTERY
 
 module = ADAPTERS
 module-str = adapter
