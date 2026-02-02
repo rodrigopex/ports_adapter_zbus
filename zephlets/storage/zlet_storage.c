@@ -7,7 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_DECLARE(storage_zephlet, CONFIG_ZEPHLET_STORAGE_LOG_LEVEL);
+LOG_MODULE_DECLARE(zlet_storage, CONFIG_ZEPHLET_STORAGE_LOG_LEVEL);
 
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)

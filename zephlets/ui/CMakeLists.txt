@@ -12,7 +12,7 @@ if(CONFIG_ZEPHLET_UI)
 
     # Interface library with include paths
     zephyr_interface_library_named(zlet_ui)
-    target_include_directories(ui_zephlet INTERFACE
+    target_include_directories(zlet_ui INTERFACE
         ${ZEPHYR_ZLET_UI_MODULE_DIR}           # Source (for _impl.c)
         "${CMAKE_CURRENT_BINARY_DIR}"               # Build (for .h/.c/.priv.h)
         "${CMAKE_BINARY_DIR}/zephlets"              # Build parent (for .pb.h)
@@ -26,5 +26,5 @@ if(CONFIG_ZEPHLET_UI)
     )
 
     add_dependencies(${ZEPHYR_CURRENT_LIBRARY} zlet_ui_codegen)
-    zephyr_library_link_libraries(ui_zephlet)
+    zephyr_library_link_libraries(zlet_ui)
 endif()

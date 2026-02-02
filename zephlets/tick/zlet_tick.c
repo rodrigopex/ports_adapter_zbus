@@ -6,7 +6,7 @@
 #include "zephyr/zbus/zbus.h"
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_DECLARE(tick_zephlet, CONFIG_ZEPHLET_TICK_LOG_LEVEL);
+LOG_MODULE_DECLARE(zlet_tick, CONFIG_ZEPHLET_TICK_LOG_LEVEL);
 
 void zlet_tick_handler(struct k_timer *timer_id)
 {
