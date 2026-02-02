@@ -41,7 +41,7 @@ message MsgStorageZephlet {
     }
 }
 
-service StorageZephlet {
+service Storage {
 
     rpc start (Empty) returns (MsgZephletStatus);
     rpc stop (Empty) returns (MsgZephletStatus);

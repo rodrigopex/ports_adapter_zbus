@@ -36,7 +36,7 @@ message Msg{{ zephlet_name_pascal }}Zephlet {
     }
 }
 
-service {{ zephlet_name_pascal }}Zephlet {
+service {{ zephlet_name_pascal }} {
 {% if include_basic_commands %}
     rpc start (Empty) returns (MsgZephletStatus);
     rpc stop (Empty) returns (MsgZephletStatus);

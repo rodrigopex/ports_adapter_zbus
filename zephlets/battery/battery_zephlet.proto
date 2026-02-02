@@ -46,7 +46,7 @@ message MsgBatteryZephlet {
     }
 }
 
-service BatteryZephlet {
+service Battery {
   rpc start (Empty) returns (MsgZephletStatus);
   rpc stop (Empty) returns (MsgZephletStatus);
   rpc get_status (Empty) returns (MsgZephletStatus);

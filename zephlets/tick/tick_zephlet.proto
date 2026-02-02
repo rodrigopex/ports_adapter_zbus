@@ -35,7 +35,7 @@ message MsgTickZephlet {
   }
 }
 
-service TickZephlet {
+service Tick {
   rpc start (Empty) returns (MsgZephletStatus);
   rpc stop (Empty) returns (MsgZephletStatus);
   rpc get_status (Empty) returns (MsgZephletStatus);
