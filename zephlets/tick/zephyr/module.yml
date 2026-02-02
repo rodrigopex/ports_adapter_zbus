@@ -1,4 +1,4 @@
-name: tick_service
+name: tick_zephlet
 build:
   cmake: .
   kconfig: Kconfig

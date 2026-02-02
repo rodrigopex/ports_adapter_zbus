@@ -1,4 +1,4 @@
-name: battery_service
+name: battery_zephlet
 build:
   cmake: .
   kconfig: Kconfig

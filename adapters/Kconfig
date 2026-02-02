@@ -1,5 +1,5 @@
 config ADAPTERS
-    bool "Service adapters"
+    bool "Zephlet adapters"
     default y
     select ZBUS
     select ZBUS_ASYNC_LISTENER
@@ -9,24 +9,24 @@ config ADAPTERS
 if(ADAPTERS)
 
 config TICK_TO_UI_ADAPTER
-    bool "From tick to ui service adapter"
+    bool "From tick to ui zephlet adapter"
     default y
-    depends on TICK_SERVICE && UI_SERVICE
+    depends on TICK_ZEPHLET && UI_ZEPHLET
 
 config DEBUG_ADAPTER
-    bool "From any to main service adapter"
+    bool "From any to main zephlet adapter"
     default y
-    depends on TICK_SERVICE && TAMPER_DETECTION_SERVICE
+    depends on TICK_ZEPHLET && TAMPER_DETECTION_ZEPHLET
 
 config BATTERY_TO_STORAGE_ADAPTER
-	bool "From battery to storage service adapter"
+	bool "From battery to storage zephlet adapter"
 	default y
-	depends on BATTERY_SERVICE && STORAGE_SERVICE
+	depends on BATTERY_ZEPHLET && STORAGE_ZEPHLET
 
 config TICK_TO_STORAGE_ADAPTER
-	bool "From tick to storage service adapter"
+	bool "From tick to storage zephlet adapter"
 	default y
-	depends on TICK_SERVICE && STORAGE_SERVICE
+	depends on TICK_ZEPHLET && STORAGE_ZEPHLET
 
 module = ADAPTERS
 module-str = adapter

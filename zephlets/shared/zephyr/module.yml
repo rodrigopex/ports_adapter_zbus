@@ -1,4 +1,4 @@
-name: shared_service
+name: shared_zephlet
 build:
   cmake: .
   kconfig: Kconfig

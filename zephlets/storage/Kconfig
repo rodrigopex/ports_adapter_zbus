@@ -1,16 +1,16 @@
-config STORAGE_SERVICE
-    bool "Storage Service Module"
+config STORAGE_ZEPHLET
+    bool "Storage Zephlet Module"
     select NANOPB
     select ZBUS
     select ZBUS_ASYNC_LISTENER
     help
-      Enable this option to include the Storage Service Module in the build.
-      Storage Service Module.
+      Enable this option to include the Storage Zephlet Module in the build.
+      Storage Zephlet Module.
 
-if(STORAGE_SERVICE)
+if(STORAGE_ZEPHLET)
 
-module = STORAGE_SERVICE
-module-str = storage_service
+module = STORAGE_ZEPHLET
+module-str = storage_zephlet
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

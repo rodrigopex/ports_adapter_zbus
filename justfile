@@ -61,35 +61,35 @@ attach:
 kb arg:
     @fend @no_trailing_newline "{{arg}} << 10" | wl-copy
 
-gen_service_files service_name:
-    @echo "Regenerating service files to build directory..."
-    @test -d build/modules/{{service_name}}_service || (echo "Error: build/modules/{{service_name}}_service not found. Run 'just b' first." && exit 1)
-    python3 zephlets/shared/codegen/generate_service.py \
-    --proto zephlets/{{service_name}}/{{service_name}}_service.proto \
-    --output-dir build/modules/{{service_name}}_service \
-    --service-name {{service_name}}_service \
-    --module-dir {{service_name}} \
+gen_zephlet_files zephlet_name:
+    @echo "Regenerating zephlet files to build directory..."
+    @test -d build/modules/{{zephlet_name}}_zephlet || (echo "Error: build/modules/{{zephlet_name}}_zephlet not found. Run 'just b' first." && exit 1)
+    python3 zephlets/shared/codegen/generate_zephlet.py \
+    --proto zephlets/{{zephlet_name}}/{{zephlet_name}}_zephlet.proto \
+    --output-dir build/modules/{{zephlet_name}}_zephlet \
+    --zephlet-name {{zephlet_name}}_zephlet \
+    --module-dir {{zephlet_name}} \
     --no-generate-impl
 
-# Create new service (interactive)
-new_service_interactive:
+# Create new zephlet (interactive)
+new_zephlet_interactive:
     copier copy --UNSAFE \
-    zephlets/shared/codegen/zephyr_service_template \
+    zephlets/shared/codegen/zephyr_zephlet_template \
     zephlets/
 
-# Create new service with name
-new_service service_name:
+# Create new zephlet with name
+new_zephlet zephlet_name:
     copier copy --UNSAFE --force \
-    --data service_name="{{service_name}}" \
+    --data zephlet_name="{{zephlet_name}}" \
     --data include_basic_commands=true \
-    --data service_description="{{service_name}} Service Module" \
+    --data zephlet_description="{{zephlet_name}} Zephlet Module" \
     --data author_name="" \
-    zephlets/shared/codegen/zephyr_service_template \
+    zephlets/shared/codegen/zephyr_zephlet_template \
     zephlets/
 
-# Update service from template
-update_service service_name:
-    @cd zephlets/{{service_name}} && copier update --UNSAFE
+# Update zephlet from template
+update_zephlet zephlet_name:
+    @cd zephlets/{{zephlet_name}} && copier update --UNSAFE
 
 # Create new adapter (interactive)
 new_adapter_interactive:

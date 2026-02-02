@@ -1,15 +1,15 @@
-config TICK_SERVICE
-    bool "Tick Service Module"
+config TICK_ZEPHLET
+    bool "Tick Zephlet Module"
     select NANOPB
     select ZBUS
     select ZBUS_ASYNC_LISTENER
     help
-      Enable this option to include the tick service module which provides periodic tick functionality.
+      Enable this option to include the tick zephlet module which provides periodic tick functionality.
 
-if(TICK_SERVICE)
+if(TICK_ZEPHLET)
 
-module = TICK_SERVICE
-module-str = tick_service
+module = TICK_ZEPHLET
+module-str = tick_zephlet
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

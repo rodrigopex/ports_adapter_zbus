@@ -1,4 +1,4 @@
-name: ui_service
+name: ui_zephlet
 build:
   cmake: .
   kconfig: Kconfig

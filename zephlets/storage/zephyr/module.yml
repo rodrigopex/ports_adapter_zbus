@@ -1,4 +1,4 @@
-name: storage_service
+name: storage_zephlet
 build:
   cmake: .
   kconfig: Kconfig
