@@ -1,22 +1,22 @@
 /* GENERATED FILE - DO NOT EDIT */
-/* Generated from {{ service_name }}.proto */
+/* Generated from {{ zephlet_name }}.proto */
 
-#include "{{ service_name }}_interface.h"
+#include "{{ zephlet_name }}_interface.h"
 #include <zephyr/zbus/zbus.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER({{ service_name }}, CONFIG_{{ service_name_upper }}_LOG_LEVEL);
+LOG_MODULE_REGISTER({{ zephlet_name }}, CONFIG_{{ zephlet_name_upper }}_LOG_LEVEL);
 
-ZBUS_CHAN_DEFINE(chan_{{ service_name }}_invoke, struct msg_{{ service_name }}_invoke, NULL, NULL,
-		 ZBUS_OBSERVERS(lis_{{ service_name }}), MSG_{{ service_name_upper }}_INVOKE_INIT_DEFAULT);
+ZBUS_CHAN_DEFINE(chan_{{ zephlet_name }}_invoke, struct msg_{{ zephlet_name }}_invoke, NULL, NULL,
+		 ZBUS_OBSERVERS(lis_{{ zephlet_name }}), MSG_{{ zephlet_name_upper }}_INVOKE_INIT_DEFAULT);
 
-ZBUS_CHAN_DEFINE(chan_{{ service_name }}_report, struct msg_{{ service_name }}_report, NULL, NULL,
-		 ZBUS_OBSERVERS_EMPTY, MSG_{{ service_name_upper }}_REPORT_INIT_DEFAULT);
+ZBUS_CHAN_DEFINE(chan_{{ zephlet_name }}_report, struct msg_{{ zephlet_name }}_report, NULL, NULL,
+		 ZBUS_OBSERVERS_EMPTY, MSG_{{ zephlet_name_upper }}_REPORT_INIT_DEFAULT);
 
 static const struct zephlet *impl = NULL;
 
-int {{ service_name }}_set_implementation(const struct zephlet *implementation)
+int {{ zephlet_name }}_set_implementation(const struct zephlet *implementation)
 {
 	int ret = -EBUSY;
 
@@ -24,7 +24,7 @@ int {{ service_name }}_set_implementation(const struct zephlet *implementation)
 		impl = implementation;
 		ret = 0;
 	} else {
-		LOG_ERR("Trying to replace implementation for {{ service_name_camel }} Zephlet");
+		LOG_ERR("Trying to replace implementation for {{ zephlet_name_camel }} Zephlet");
 	}
 
 	return ret;
@@ -32,8 +32,8 @@ int {{ service_name }}_set_implementation(const struct zephlet *implementation)
 
 static void api_handler(const struct zbus_channel *chan)
 {
-	struct {{ service_name }}_api *api;
-	const struct msg_{{ service_name }}_invoke *ivk;
+	struct {{ zephlet_name }}_api *api;
+	const struct msg_{{ zephlet_name }}_invoke *ivk;
 
 	if (impl == NULL) {
 		LOG_ERR("Zephlet implementation required!");
@@ -50,7 +50,7 @@ static void api_handler(const struct zbus_channel *chan)
 
 	switch (ivk->which_{{ invoke_oneof_name }}) {
 {%- for field in invoke_fields %}
-	case MSG_{{ service_name_upper }}_INVOKE_{{ field.name|upper }}_TAG:
+	case MSG_{{ zephlet_name_upper }}_INVOKE_{{ field.name|upper }}_TAG:
 		if (api->{{ field.name }}) {
 {%- if field.is_empty %}
 			api->{{ field.name }}(impl);
@@ -63,4 +63,4 @@ static void api_handler(const struct zbus_channel *chan)
 	}
 }
 
-ZBUS_LISTENER_DEFINE(lis_{{ service_name }}, api_handler);
+ZBUS_LISTENER_DEFINE(lis_{{ zephlet_name }}, api_handler);
