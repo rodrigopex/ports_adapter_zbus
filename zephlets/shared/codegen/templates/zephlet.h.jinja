@@ -4,7 +4,7 @@
 #ifndef _{{ service_name_upper }}_H_
 #define _{{ service_name_upper }}_H_
 
-#include "service.h"
+#include "zephlet.h"
 #include "{{ module_name }}/{{ service_name }}.pb.h"
 #include <zephyr/zbus/zbus.h>
 
@@ -15,15 +15,15 @@ struct {{ service_name }}_data {
 {%- if has_config %}
 	struct {{ config_type }} config;
 {%- endif %}
-	struct msg_service_status status;
+	struct msg_zephlet_status status;
 };
 
 struct {{ service_name }}_api {
 {%- for field in invoke_fields %}
 {%- if field.is_empty %}
-	int (*{{ field.name }})(const struct service *service);
+	int (*{{ field.name }})(const struct zephlet *zephlet);
 {%- else %}
-	int (*{{ field.name }})(const struct service *service,
+	int (*{{ field.name }})(const struct zephlet *zephlet,
 	                        const struct msg_{{ service_name }}_{{ field.message_type|camel_to_snake }} *{{ field.message_type|camel_to_snake }});
 {%- endif %}
 {%- endfor %}
@@ -58,6 +58,6 @@ static inline int {{ service_name }}_{{ field.name }}_set({% for cfg in config_f
 {%- endif %}
 {%- endfor %}
 
-int {{ service_name }}_set_implementation(const struct service *implementation);
+int {{ service_name }}_set_implementation(const struct zephlet *implementation);
 
 #endif /* _{{ service_name_upper }}_H_ */

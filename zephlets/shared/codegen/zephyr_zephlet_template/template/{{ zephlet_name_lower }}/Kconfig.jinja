@@ -1,0 +1,16 @@
+config {{ zephlet_name_upper }}_ZEPHLET
+    bool "{{ zephlet_name }} Zephlet Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the {{ zephlet_name }} Zephlet Module in the build.
+      {{ zephlet_description }}.
+
+if({{ zephlet_name_upper }}_ZEPHLET)
+
+module = {{ zephlet_name_upper }}_ZEPHLET
+module-str = {{ zephlet_name_lower }}_zephlet
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

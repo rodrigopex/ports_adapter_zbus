@@ -1,0 +1,141 @@
+/* TODO: Complete implementation and remove this header when done */
+
+#include "{{ zephlet_name_lower }}/{{ zephlet_name_lower }}_zephlet.pb.h"
+#include "{{ zephlet_name_lower }}_zephlet_interface.h"
+
+#include "{{ zephlet_name_lower }}_zephlet.h"
+#include "zephyr/kernel.h"
+#include "zephyr/zbus/zbus.h"
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_DECLARE({{ zephlet_name_lower }}_zephlet, CONFIG_{{ zephlet_name_upper }}_ZEPHLET_LOG_LEVEL);
+
+{% if include_basic_commands %}
+void {{ zephlet_name_lower }}_zephlet_handler(struct k_timer *timer_id)
+{
+	LOG_DBG("{{ zephlet_name_lower }} tick!");
+
+	struct msg_{{ zephlet_name_lower }}_zephlet_events events = {/* TODO: Set event fields */};
+
+	{{ zephlet_name_lower }}_zephlet_report_events(&events, K_NO_WAIT);
+}
+
+K_TIMER_DEFINE(timer_{{ zephlet_name_lower }}_zephlet, {{ zephlet_name_lower }}_zephlet_handler, NULL);
+{% endif %}
+
+{% if include_basic_commands %}
+static int start(const struct zephlet *zephlet)
+{
+	struct {{ zephlet_name_lower }}_zephlet_data *data = zephlet->data;
+	struct msg_zephlet_status status;
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = true;
+		status = data->status;
+	}
+
+	/* TODO: Start zephlet resources (timers, threads, etc.) */
+
+	return {{ zephlet_name_lower }}_zephlet_report_status(&status, K_MSEC(250));
+}
+
+static int stop(const struct zephlet *zephlet)
+{
+	struct {{ zephlet_name_lower }}_zephlet_data *data = zephlet->data;
+	struct msg_zephlet_status status;
+
+	K_SPINLOCK(&data->lock) {
+		status = data->status;
+	}
+
+	if (!status.is_running) {
+		LOG_DBG("Zephlet has not started yet!");
+	}
+
+	/* TODO: Stop zephlet resources (timers, threads, etc.) */
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = false;
+	}
+
+	return {{ zephlet_name_lower }}_zephlet_report_status(&status, K_MSEC(250));
+}
+
+static int get_status(const struct zephlet *zephlet)
+{
+	struct {{ zephlet_name_lower }}_zephlet_data *data = zephlet->data;
+	struct msg_zephlet_status status;
+
+	K_SPINLOCK(&data->lock) {
+		status = data->status;
+	}
+
+	return {{ zephlet_name_lower }}_zephlet_report_status(&status, K_MSEC(250));
+}
+
+static int config(const struct zephlet *zephlet, const struct msg_{{ zephlet_name_lower }}_zephlet_config *config)
+{
+	struct {{ zephlet_name_lower }}_zephlet_data *data = zephlet->data;
+
+	K_SPINLOCK(&data->lock) {
+		data->config = *config;
+	}
+
+	/* TODO: Apply configuration changes to zephlet resources */
+
+	return {{ zephlet_name_lower }}_zephlet_report_config(config, K_MSEC(250));
+}
+
+static int get_config(const struct zephlet *zephlet)
+{
+	struct {{ zephlet_name_lower }}_zephlet_data *data = zephlet->data;
+	struct msg_{{ zephlet_name_lower }}_zephlet_config config;
+
+	K_SPINLOCK(&data->lock) {
+		config = data->config;
+	}
+
+	return {{ zephlet_name_lower }}_zephlet_report_config(&config, K_MSEC(250));
+}
+
+static int get_events(const struct zephlet *zephlet)
+{
+	struct {{ zephlet_name_lower }}_zephlet_data *data = zephlet->data;
+
+	K_SPINLOCK(&data->lock) {
+		/* TODO: Implement get_events logic */
+	}
+	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
+	return 0;
+}
+{% endif %}
+
+/* TODO: Add custom RPC method implementations here */
+
+static struct {{ zephlet_name_lower }}_zephlet_api api = {
+{% if include_basic_commands %}
+	.start = start,
+	.stop = stop,
+	.get_status = get_status,
+	.config = config,
+	.get_config = get_config,
+	.get_events = get_events,
+{% endif %}
+	/* TODO: Add custom RPC method pointers */
+};
+
+static struct {{ zephlet_name_lower }}_zephlet_data data = {
+	.config = MSG_{{ zephlet_name_upper }}_ZEPHLET_CONFIG_INIT_ZERO,
+	.status = {.is_running = false}
+};
+
+int {{ zephlet_name_lower }}_zephlet_init_fn(const struct zephlet *self)
+{
+	int err = {{ zephlet_name_lower }}_zephlet_set_implementation(self);
+
+	printk("   -> %s initialed with%s error\n", self->name, err == 0 ? " no" : "");
+
+	return err;
+}
+
+ZEPHLET_DEFINE({{ zephlet_name_lower }}_zephlet, {{ zephlet_name_lower }}_zephlet_init_fn, &api, &data);

@@ -9,43 +9,43 @@
 
 LOG_MODULE_DECLARE({{ service_name }}, CONFIG_{{ service_name_upper }}_LOG_LEVEL);
 
-/* TODO: Add service-specific resources (timers, work queues, threads) */
+/* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 
 {%- if rpc_methods %}
 {%- for method in rpc_methods %}
 
 {%- if method.report_field_name == 'status' %}
 {%- if method.name == 'start' %}
-static int start(const struct service *service)
+static int start(const struct zephlet *zephlet)
 {
-	struct {{ service_name }}_data *data = service->data;
-	struct msg_service_status status;
+	struct {{ service_name }}_data *data = zephlet->data;
+	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
 		data->status.is_running = true;
 		status = data->status;
 	}
 
-	/* TODO: Start service resources (timers, threads, etc.) */
+	/* TODO: Start zephlet resources (timers, threads, etc.) */
 
 	return {{ service_name }}_report_status(&status, K_MSEC(250));
 }
 {%- elif method.name == 'stop' %}
 
-static int stop(const struct service *service)
+static int stop(const struct zephlet *zephlet)
 {
-	struct {{ service_name }}_data *data = service->data;
-	struct msg_service_status status;
+	struct {{ service_name }}_data *data = zephlet->data;
+	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
 	if (!status.is_running) {
-		LOG_DBG("Service has not started yet!");
+		LOG_DBG("Zephlet has not started yet!");
 	}
 
-	/* TODO: Stop service resources (timers, threads, etc.) */
+	/* TODO: Stop zephlet resources (timers, threads, etc.) */
 
 	K_SPINLOCK(&data->lock) {
 		data->status.is_running = false;
@@ -55,10 +55,10 @@ static int stop(const struct service *service)
 }
 {%- elif method.name == 'get_status' %}
 
-static int get_status(const struct service *service)
+static int get_status(const struct zephlet *zephlet)
 {
-	struct {{ service_name }}_data *data = service->data;
-	struct msg_service_status status;
+	struct {{ service_name }}_data *data = zephlet->data;
+	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
@@ -69,13 +69,13 @@ static int get_status(const struct service *service)
 {%- else %}
 
 /* RPC returns {{ method.output_type }} (status) */
-static int {{ method.name }}(const struct service *service
+static int {{ method.name }}(const struct zephlet *zephlet
 {%- if method.input_type != 'Empty' -%}
 , const struct msg_{{ service_name }}_{{ method.input_type|proto_type_to_snake }} *{{ method.input_type|proto_type_to_snake }}
 {%- endif -%})
 {
-	struct {{ service_name }}_data *data = service->data;
-	struct msg_service_status status;
+	struct {{ service_name }}_data *data = zephlet->data;
+	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
 		/* TODO: Implement {{ method.name }} logic */
@@ -88,15 +88,15 @@ static int {{ method.name }}(const struct service *service
 {%- elif method.report_field_name == 'config' %}
 {%- if method.name == 'config' %}
 
-static int config(const struct service *service, const struct msg_{{ service_name }}_config *config)
+static int config(const struct zephlet *zephlet, const struct msg_{{ service_name }}_config *config)
 {
-	struct {{ service_name }}_data *data = service->data;
+	struct {{ service_name }}_data *data = zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
 	}
 
-	/* TODO: Apply configuration changes to service resources */
+	/* TODO: Apply configuration changes to zephlet resources */
 
 	return {{ service_name }}_report_config(config, K_MSEC(250));
 }
@@ -104,7 +104,7 @@ static int config(const struct service *service, const struct msg_{{ service_nam
 
 static int get_config(const struct service *service)
 {
-	struct {{ service_name }}_data *data = service->data;
+	struct {{ service_name }}_data *data = zephlet->data;
 	struct msg_{{ service_name }}_config config;
 
 	K_SPINLOCK(&data->lock) {
@@ -116,12 +116,12 @@ static int get_config(const struct service *service)
 {%- else %}
 
 /* RPC returns {{ method.output_type }} (config) */
-static int {{ method.name }}(const struct service *service
+static int {{ method.name }}(const struct zephlet *zephlet
 {%- if method.input_type != 'Empty' -%}
 , const struct msg_{{ service_name }}_{{ method.input_type|proto_type_to_snake }} *{{ method.input_type|proto_type_to_snake }}
 {%- endif -%})
 {
-	struct {{ service_name }}_data *data = service->data;
+	struct {{ service_name }}_data *data = zephlet->data;
 	struct msg_{{ service_name }}_config config;
 
 	K_SPINLOCK(&data->lock) {
@@ -135,12 +135,12 @@ static int {{ method.name }}(const struct service *service
 {%- else %}
 
 /* RPC returns {{ method.output_type }} - publish to report field: {{ method.report_field_name }} */
-static int {{ method.name }}(const struct service *service
+static int {{ method.name }}(const struct zephlet *zephlet
 {%- if method.input_type != 'Empty' -%}
 , const struct msg_{{ service_name }}_{{ method.input_type|proto_type_to_snake }} *{{ method.input_type|proto_type_to_snake }}
 {%- endif -%})
 {
-	struct {{ service_name }}_data *data = service->data;
+	struct {{ service_name }}_data *data = zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
 		/* TODO: Implement {{ method.name }} logic */
@@ -172,14 +172,14 @@ static int {{ method.name }}(const struct service *service
 {%- else %}
 {%- for field in invoke_fields %}
 
-/* Fallback: No service definition found, using invoke fields */
-static int {{ field.name }}(const struct service *service{% if not field.is_empty %}, const struct msg_{{ service_name }}_{{ field.message_type|camel_to_snake }} *{{ field.message_type|camel_to_snake }}{% endif %})
+/* Fallback: No zephlet definition found, using invoke fields */
+static int {{ field.name }}(const struct zephlet *zephlet{% if not field.is_empty %}, const struct msg_{{ service_name }}_{{ field.message_type|camel_to_snake }} *{{ field.message_type|camel_to_snake }}{% endif %})
 {
-	struct {{ service_name }}_data *data = service->data;
+	struct {{ service_name }}_data *data = zephlet->data;
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
-		/* TODO: Access/modify service state */
+		/* TODO: Access/modify zephlet state */
 	}
 
 	/* TODO: Add business logic and report state changes */
@@ -208,7 +208,7 @@ static struct {{ service_name }}_data data = {
 	.status = {.is_running = false}
 };
 
-int {{ service_name }}_init_fn(const struct service *self)
+int {{ service_name }}_init_fn(const struct zephlet *self)
 {
 	int err = {{ service_name }}_set_implementation(self);
 
@@ -217,4 +217,4 @@ int {{ service_name }}_init_fn(const struct service *self)
 	return err;
 }
 
-SERVICE_DEFINE({{ service_name }}, {{ service_name }}_init_fn, &api, &data);
+ZEPHLET_DEFINE({{ service_name }}, {{ service_name }}_init_fn, &api, &data);

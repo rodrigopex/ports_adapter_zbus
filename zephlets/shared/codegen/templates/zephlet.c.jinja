@@ -14,9 +14,9 @@ ZBUS_CHAN_DEFINE(chan_{{ service_name }}_invoke, struct msg_{{ service_name }}_i
 ZBUS_CHAN_DEFINE(chan_{{ service_name }}_report, struct msg_{{ service_name }}_report, NULL, NULL,
 		 ZBUS_OBSERVERS_EMPTY, MSG_{{ service_name_upper }}_REPORT_INIT_DEFAULT);
 
-static const struct service *impl = NULL;
+static const struct zephlet *impl = NULL;
 
-int {{ service_name }}_set_implementation(const struct service *implementation)
+int {{ service_name }}_set_implementation(const struct zephlet *implementation)
 {
 	int ret = -EBUSY;
 
@@ -24,7 +24,7 @@ int {{ service_name }}_set_implementation(const struct service *implementation)
 		impl = implementation;
 		ret = 0;
 	} else {
-		LOG_ERR("Trying to replace implementation for {{ service_name_camel }} Service");
+		LOG_ERR("Trying to replace implementation for {{ service_name_camel }} Zephlet");
 	}
 
 	return ret;
@@ -36,12 +36,12 @@ static void api_handler(const struct zbus_channel *chan)
 	const struct msg_{{ service_name }}_invoke *ivk;
 
 	if (impl == NULL) {
-		LOG_ERR("Service implementation required!");
+		LOG_ERR("Zephlet implementation required!");
 		return;
 	}
 
 	if (impl->api == NULL) {
-		LOG_ERR("Service API required!");
+		LOG_ERR("Zephlet API required!");
 		return;
 	}
 

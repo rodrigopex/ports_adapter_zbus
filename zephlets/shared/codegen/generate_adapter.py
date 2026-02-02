@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Adapter Generator for Zephyr Services
-Generates adapter boilerplate from service proto files
+Adapter Generator for Zephyr Zephlets
+Generates adapter boilerplate from zephlet proto files
 """
 
 import os
@@ -28,33 +28,33 @@ def snake_to_camel(name):
     return ''.join(word.capitalize() for word in name.split('_'))
 
 
-def discover_services(services_path):
+def discover_zephlets(zephlets_path):
     """
-    Scan services/* for proto files and extract metadata
-    Returns: list of dicts with service metadata
+    Scan zephlets/* for proto files and extract metadata
+    Returns: list of dicts with zephlet metadata
     """
-    services = []
-    services_dir = Path(services_path)
+    zephlets = []
+    zephlets_dir = Path(zephlets_path)
 
-    if not services_dir.exists():
-        print(f"Error: Services path '{services_path}' does not exist")
-        return services
+    if not zephlets_dir.exists():
+        print(f"Error: Zephlets path '{zephlets_path}' does not exist")
+        return zephlets
 
     # Scan each subdirectory for proto files
-    for service_dir in services_dir.iterdir():
-        if not service_dir.is_dir():
+    for zephlet_dir in zephlets_dir.iterdir():
+        if not zephlet_dir.is_dir():
             continue
 
-        service_name = service_dir.name
+        zephlet_name = zephlet_dir.name
 
-        # Skip shared and other non-service directories
-        if service_name in ['shared']:
+        # Skip shared and other non-zephlet directories
+        if zephlet_name in ['shared']:
             continue
 
-        # Look for <service>_service.proto or <service>.proto
-        proto_path = service_dir / f"{service_name}_service.proto"
+        # Look for <zephlet>_zephlet.proto or <zephlet>.proto
+        proto_path = zephlet_dir / f"{zephlet_name}_zephlet.proto"
         if not proto_path.exists():
-            proto_path = service_dir / f"{service_name}.proto"
+            proto_path = zephlet_dir / f"{zephlet_name}.proto"
 
         if not proto_path.exists():
             continue
@@ -73,14 +73,14 @@ def discover_services(services_path):
                 if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
                     messages.append(element)
 
-            # Find service message (e.g., MsgTickService)
-            service_msg = None
+            # Find zephlet message (e.g., MsgTickZephlet)
+            zephlet_msg = None
             for message in messages:
-                if message.name.startswith('Msg') and message.name.endswith('Service'):
-                    service_msg = message
+                if message.name.startswith('Msg') and message.name.endswith('Zephlet'):
+                    zephlet_msg = message
                     break
 
-            if not service_msg:
+            if not zephlet_msg:
                 continue
 
             # Find nested Report message
@@ -88,7 +88,7 @@ def discover_services(services_path):
             report_oneof_name = None
             report_fields = []
 
-            for element in service_msg.elements:
+            for element in zephlet_msg.elements:
                 if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
                     if element.name == 'Report':
                         report_msg = element
@@ -106,8 +106,8 @@ def discover_services(services_path):
                         break
 
                 if report_fields:
-                    services.append({
-                        'name': service_name,
+                    zephlets.append({
+                        'name': zephlet_name,
                         'proto_path': str(proto_path),
                         'report_oneof': report_oneof_name,
                         'report_fields': report_fields
@@ -117,28 +117,28 @@ def discover_services(services_path):
             print(f"Warning: Failed to parse {proto_path}: {e}")
             continue
 
-    return sorted(services, key=lambda s: s['name'])
+    return sorted(zephlets, key=lambda z: z['name'])
 
 
-def select_services_interactive(services):
+def select_zephlets_interactive(zephlets):
     """
-    Interactive service selection
+    Interactive zephlet selection
     Returns: (origin_dict, dest_dict)
     """
-    if not services:
-        print("Error: No services found")
+    if not zephlets:
+        print("Error: No zephlets found")
         sys.exit(1)
 
-    print("\nAvailable services:")
-    for i, service in enumerate(services, 1):
-        print(f"  {i}. {service['name']}")
+    print("\nAvailable zephlets:")
+    for i, zephlet in enumerate(zephlets, 1):
+        print(f"  {i}. {zephlet['name']}")
 
     # Select origin
     while True:
         try:
-            origin_idx = int(input("\nSelect origin service (number): ")) - 1
-            if 0 <= origin_idx < len(services):
-                origin = services[origin_idx]
+            origin_idx = int(input("\nSelect origin zephlet (number): ")) - 1
+            if 0 <= origin_idx < len(zephlets):
+                origin = zephlets[origin_idx]
                 break
             print("Invalid selection")
         except (ValueError, KeyboardInterrupt):
@@ -146,16 +146,16 @@ def select_services_interactive(services):
             sys.exit(1)
 
     # Select destination (exclude origin)
-    dest_services = [s for i, s in enumerate(services) if i != origin_idx]
-    print(f"\nAvailable destination services (excluding {origin['name']}):")
-    for i, service in enumerate(dest_services, 1):
-        print(f"  {i}. {service['name']}")
+    dest_zephlets = [z for i, z in enumerate(zephlets) if i != origin_idx]
+    print(f"\nAvailable destination zephlets (excluding {origin['name']}):")
+    for i, zephlet in enumerate(dest_zephlets, 1):
+        print(f"  {i}. {zephlet['name']}")
 
     while True:
         try:
-            dest_idx = int(input("\nSelect destination service (number): ")) - 1
-            if 0 <= dest_idx < len(dest_services):
-                dest = dest_services[dest_idx]
+            dest_idx = int(input("\nSelect destination zephlet (number): ")) - 1
+            if 0 <= dest_idx < len(dest_zephlets):
+                dest = dest_zephlets[dest_idx]
                 break
             print("Invalid selection")
         except (ValueError, KeyboardInterrupt):
@@ -177,7 +177,7 @@ def filter_report_fields(origin, interactive=True):
     if not fields:
         return []
 
-    print(f"\nReport fields from {origin['name']} service:")
+    print(f"\nReport fields from {origin['name']} zephlet:")
     for i, field in enumerate(fields, 1):
         print(f"  {i}. {field.name}")
 
@@ -216,19 +216,19 @@ def suggest_destination_api(destination):
             if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
                 messages.append(element)
 
-        # Find service message (e.g., MsgUiService)
-        service_msg = None
+        # Find zephlet message (e.g., MsgUiZephlet)
+        zephlet_msg = None
         for message in messages:
-            if message.name.startswith('Msg') and message.name.endswith('Service'):
-                service_msg = message
+            if message.name.startswith('Msg') and message.name.endswith('Zephlet'):
+                zephlet_msg = message
                 break
 
-        if not service_msg:
+        if not zephlet_msg:
             return []
 
         # Find nested Invoke message
         invoke_msg = None
-        for element in service_msg.elements:
+        for element in zephlet_msg.elements:
             if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
                 if element.name == 'Invoke':
                     invoke_msg = element
@@ -264,19 +264,19 @@ def build_adapter_context(origin, dest, selected_fields, dest_api_suggestions):
     origin_camel = snake_to_camel(origin_name)
     dest_camel = snake_to_camel(dest_name)
 
-    # Adapter name should be OriginService+DestService_adapter
-    adapter_name = f"{origin_camel}Service+{dest_camel}Service_adapter"
+    # Adapter name should be OriginZephlet+DestZephlet_adapter
+    adapter_name = f"{origin_camel}Zephlet+{dest_camel}Zephlet_adapter"
 
     context = {
-        'origin_service': origin_name,
-        'origin_service_upper': origin_name.upper(),
-        'origin_service_camel': origin_camel,
+        'origin_zephlet': origin_name,
+        'origin_zephlet_upper': origin_name.upper(),
+        'origin_zephlet_camel': origin_camel,
         'origin_report_oneof': origin['report_oneof'],
         'origin_report_fields': origin['report_fields'],
         'selected_report_fields': selected_fields,
-        'dest_service': dest_name,
-        'dest_service_upper': dest_name.upper(),
-        'dest_service_camel': dest_camel,
+        'dest_zephlet': dest_name,
+        'dest_zephlet_upper': dest_name.upper(),
+        'dest_zephlet_camel': dest_camel,
         'adapter_name': adapter_name,
         'adapter_config': f"{origin_name.upper()}_TO_{dest_name.upper()}_ADAPTER",
         'listener_name': f"lis_{origin_name}_to_{dest_name}_adapter",
@@ -443,12 +443,12 @@ def update_cmakelists(cmake_path, adapter_name, adapter_config):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate adapter boilerplate from service protos')
-    parser.add_argument('--services-path', required=True, help='Path to services directory')
+    parser = argparse.ArgumentParser(description='Generate adapter boilerplate from zephlet protos')
+    parser.add_argument('--zephlets-path', required=True, help='Path to zephlets directory')
     parser.add_argument('--output-dir', required=True, help='Output directory for adapter files')
     parser.add_argument('--interactive', action='store_true', help='Interactive mode')
-    parser.add_argument('--origin', help='Origin service name (non-interactive)')
-    parser.add_argument('--destination', help='Destination service name (non-interactive)')
+    parser.add_argument('--origin', help='Origin zephlet name (non-interactive)')
+    parser.add_argument('--destination', help='Destination zephlet name (non-interactive)')
 
     args = parser.parse_args()
 
@@ -460,33 +460,33 @@ def main():
         print(f"Error: Templates directory not found: {templates_dir}")
         sys.exit(1)
 
-    # Discover services
-    print(f"Scanning services in {args.services_path}...")
-    services = discover_services(args.services_path)
+    # Discover zephlets
+    print(f"Scanning zephlets in {args.zephlets_path}...")
+    zephlets = discover_zephlets(args.zephlets_path)
 
-    if not services:
-        print("No services found")
+    if not zephlets:
+        print("No zephlets found")
         sys.exit(1)
 
-    print(f"Found {len(services)} services")
+    print(f"Found {len(zephlets)} zephlets")
 
-    # Select services
+    # Select zephlets
     if args.interactive:
-        origin, dest = select_services_interactive(services)
+        origin, dest = select_zephlets_interactive(zephlets)
         selected_fields = filter_report_fields(origin, interactive=True)
     else:
         if not args.origin or not args.destination:
             print("Error: --origin and --destination required in non-interactive mode")
             sys.exit(1)
 
-        origin = next((s for s in services if s['name'] == args.origin), None)
-        dest = next((s for s in services if s['name'] == args.destination), None)
+        origin = next((z for z in zephlets if z['name'] == args.origin), None)
+        dest = next((z for z in zephlets if z['name'] == args.destination), None)
 
         if not origin:
-            print(f"Error: Origin service '{args.origin}' not found")
+            print(f"Error: Origin zephlet '{args.origin}' not found")
             sys.exit(1)
         if not dest:
-            print(f"Error: Destination service '{args.destination}' not found")
+            print(f"Error: Destination zephlet '{args.destination}' not found")
             sys.exit(1)
 
         selected_fields = origin['report_fields']

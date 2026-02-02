@@ -16,7 +16,7 @@ static inline int {{ service_name }}_report_{{ field.name }}(k_timeout_t timeout
 {%- else %}
 {%- if field.message_type == 'MsgServiceStatus' %}
 
-static inline int {{ service_name }}_report_{{ field.name }}(const struct msg_service_status *status,
+static inline int {{ service_name }}_report_{{ field.name }}(const struct msg_zephlet_status *status,
 					     k_timeout_t timeout)
 {
 	return zbus_chan_pub(
