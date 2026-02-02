@@ -1,4 +1,4 @@
-config {{ zephlet_name_upper }}_ZEPHLET
+config ZEPHLET_{{ zephlet_name_upper }}
     bool "{{ zephlet_name }} Zephlet Module"
     select NANOPB
     select ZBUS
@@ -7,10 +7,10 @@ config {{ zephlet_name_upper }}_ZEPHLET
       Enable this option to include the {{ zephlet_name }} Zephlet Module in the build.
       {{ zephlet_description }}.
 
-if({{ zephlet_name_upper }}_ZEPHLET)
+if(ZEPHLET_{{ zephlet_name_upper }})
 
-module = {{ zephlet_name_upper }}_ZEPHLET
-module-str = {{ zephlet_name_lower }}_zephlet
+module = ZEPHLET_{{ zephlet_name_upper }}
+module-str = zlet_{{ zephlet_name_lower }}
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

@@ -1,4 +1,4 @@
-name: zlet_{{ zephlet_name_lower }}
+name: position_zephlet
 build:
   cmake: .
   kconfig: Kconfig

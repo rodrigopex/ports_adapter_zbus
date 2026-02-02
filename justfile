@@ -94,14 +94,14 @@ update_zephlet zephlet_name:
 # Create new adapter (interactive)
 new_adapter_interactive:
     python3 zephlets/shared/codegen/generate_adapter.py \
-    --services-path zephlets \
+    --zephlets-path zephlets \
     --output-dir adapters \
     --interactive
 
 # Create new adapter with origin and destination
 new_adapter origin dest:
     python3 zephlets/shared/codegen/generate_adapter.py \
-    --services-path zephlets \
+    --zephlets-path zephlets \
     --output-dir adapters \
     --origin {{origin}} \
     --destination {{dest}}

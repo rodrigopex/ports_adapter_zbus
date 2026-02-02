@@ -4,7 +4,7 @@
 
 int zephlets_init_fn(void)
 {
-	printk("Init zephlets!\n");
+	printk("Init zephlets:\n");
 
 	STRUCT_SECTION_FOREACH(zephlet, instance) {
 		printk("%p: %s initialing...\n", instance, instance->name);

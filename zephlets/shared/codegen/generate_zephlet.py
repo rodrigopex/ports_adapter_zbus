@@ -65,6 +65,11 @@ def snake_to_upper(name: str) -> str:
     return name.upper()
 
 
+def snake_to_camel(name: str) -> str:
+    """Convert snake_case to CamelCase"""
+    return ''.join(word.capitalize() for word in name.split('_'))
+
+
 def normalize_proto_type(type_str: str, zephlet_name: str) -> str:
     """
     Normalize proto types to snake_case for comparison.
@@ -266,19 +271,27 @@ def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str) -> 
         if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
             messages.append(element)
 
-    # Find the zephlet message (e.g., MsgTickZephlet)
+    # Find the zephlet message (e.g., MsgZletTick)
     zephlet_msg = None
     for message in messages:
-        if message.name.startswith('Msg') and message.name.endswith('Zephlet'):
+        if message.name.startswith('Msg') and (message.name.endswith('Zephlet') or message.name.startswith('MsgZlet')):
             zephlet_msg = message
             break
 
     if not zephlet_msg:
-        print("Error: No zephlet message found (expected Msg*Zephlet pattern)")
+        print("Error: No zephlet message found (expected Msg*Zephlet or MsgZlet* pattern)")
         sys.exit(1)
 
-    # Use provided zephlet_name instead of deriving from proto
-    # zephlet_name is already passed as parameter
+    # Extract base name from zephlet_name (e.g., "zlet_ui" -> "ui")
+    # This handles both old (ui_zephlet) and new (zlet_ui) patterns
+    base_name = zephlet_name
+    if zephlet_name.startswith('zlet_'):
+        base_name = zephlet_name[5:]  # Remove "zlet_" prefix
+    elif zephlet_name.endswith('_zephlet'):
+        base_name = zephlet_name[:-8]  # Remove "_zephlet" suffix
+
+    base_name_upper = base_name.upper()
+    base_name_camel = snake_to_camel(base_name)
 
     # Extract zephlet definition (for RPC methods)
     zephlet_def = None
@@ -426,7 +439,10 @@ def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str) -> 
     return {
         'zephlet_name': zephlet_name,
         'zephlet_name_upper': snake_to_upper(zephlet_name),
-        'zephlet_name_camel': zephlet_msg.name.replace('Msg', '').replace('Zephlet', ''),
+        'zephlet_name_camel': zephlet_msg.name.replace('Msg', '').replace('Zephlet', '').replace('Zlet', ''),
+        'base_name': base_name,
+        'base_name_upper': base_name_upper,
+        'base_name_camel': base_name_camel,
         'module_dir': module_dir,
         'module_name': os.path.basename(module_dir),
         'invoke_oneof_name': invoke_oneof_name,

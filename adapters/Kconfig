@@ -28,6 +28,11 @@ config TICK_TO_STORAGE_ADAPTER
 	default y
 	depends on TICK_ZEPHLET && STORAGE_ZEPHLET
 
+config POSITION_TO_BATTERY_ADAPTER
+	bool "From  to  service adapter"
+	default y
+	depends on _SERVICE && _SERVICE
+
 module = ADAPTERS
 module-str = adapter
 source "subsys/logging/Kconfig.template.log_config"

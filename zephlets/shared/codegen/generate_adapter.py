@@ -51,8 +51,10 @@ def discover_zephlets(zephlets_path):
         if zephlet_name in ['shared']:
             continue
 
-        # Look for <zephlet>_zephlet.proto or <zephlet>.proto
-        proto_path = zephlet_dir / f"{zephlet_name}_zephlet.proto"
+        # Look for zlet_<zephlet>.proto, <zephlet>_zephlet.proto, or <zephlet>.proto
+        proto_path = zephlet_dir / f"zlet_{zephlet_name}.proto"
+        if not proto_path.exists():
+            proto_path = zephlet_dir / f"{zephlet_name}_zephlet.proto"
         if not proto_path.exists():
             proto_path = zephlet_dir / f"{zephlet_name}.proto"
 
@@ -73,10 +75,10 @@ def discover_zephlets(zephlets_path):
                 if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
                     messages.append(element)
 
-            # Find zephlet message (e.g., MsgTickZephlet)
+            # Find zephlet message (e.g., MsgZletTick or MsgTickZephlet)
             zephlet_msg = None
             for message in messages:
-                if message.name.startswith('Msg') and message.name.endswith('Zephlet'):
+                if message.name.startswith('Msg') and (message.name.endswith('Zephlet') or message.name.startswith('MsgZlet')):
                     zephlet_msg = message
                     break
 
@@ -264,21 +266,38 @@ def build_adapter_context(origin, dest, selected_fields, dest_api_suggestions):
     origin_camel = snake_to_camel(origin_name)
     dest_camel = snake_to_camel(dest_name)
 
-    # Adapter name should be OriginZephlet+DestZephlet_adapter
-    adapter_name = f"{origin_camel}Zephlet+{dest_camel}Zephlet_adapter"
+    # Extract base names for Kconfig (e.g., "zlet_tick" -> "tick")
+    origin_base = origin_name
+    if origin_name.startswith('zlet_'):
+        origin_base = origin_name[5:]
+    elif origin_name.endswith('_zephlet'):
+        origin_base = origin_name[:-8]
+
+    dest_base = dest_name
+    if dest_name.startswith('zlet_'):
+        dest_base = dest_name[5:]
+    elif dest_name.endswith('_zephlet'):
+        dest_base = dest_name[:-8]
+
+    # Adapter name should be ZletOrigin+ZletDest_adapter (new pattern)
+    adapter_name = f"Zlet{snake_to_camel(origin_base)}+Zlet{snake_to_camel(dest_base)}_adapter"
 
     context = {
         'origin_zephlet': origin_name,
         'origin_zephlet_upper': origin_name.upper(),
         'origin_zephlet_camel': origin_camel,
+        'origin_base': origin_base,
+        'origin_base_upper': origin_base.upper(),
         'origin_report_oneof': origin['report_oneof'],
         'origin_report_fields': origin['report_fields'],
         'selected_report_fields': selected_fields,
         'dest_zephlet': dest_name,
         'dest_zephlet_upper': dest_name.upper(),
         'dest_zephlet_camel': dest_camel,
+        'dest_base': dest_base,
+        'dest_base_upper': dest_base.upper(),
         'adapter_name': adapter_name,
-        'adapter_config': f"{origin_name.upper()}_TO_{dest_name.upper()}_ADAPTER",
+        'adapter_config': f"{origin_base.upper()}_TO_{dest_base.upper()}_ADAPTER",
         'listener_name': f"lis_{origin_name}_to_{dest_name}_adapter",
         'function_name': f"{origin_name}_to_{dest_name}_adapter",
         'dest_api_suggestions': dest_api_suggestions

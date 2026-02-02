@@ -4,5 +4,6 @@ if(CONFIG_ADAPTERS)
     zephyr_library_sources_ifdef(CONFIG_TICK_TO_UI_ADAPTER "src/TickZephlet+UiZephlet_adapter.c")
     zephyr_library_sources_ifdef(CONFIG_BATTERY_TO_STORAGE_ADAPTER "src/BatteryZephlet+StorageZephlet_adapter.c")
     zephyr_library_sources_ifdef(CONFIG_TICK_TO_STORAGE_ADAPTER "src/TickZephlet+StorageZephlet_adapter.c")
+    zephyr_library_sources_ifdef(CONFIG_POSITION_TO_BATTERY_ADAPTER "src/PositionZephlet+BatteryZephlet_adapter.c")
 
 endif()

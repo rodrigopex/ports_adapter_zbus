@@ -5,7 +5,7 @@ import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message Msg{{ zephlet_name_pascal }}Zephlet {
+message MsgZlet{{ zephlet_name_pascal }} {
     message Config {
         // TODO: Add configuration fields specific to {{ zephlet_name }}
     }
@@ -41,9 +41,9 @@ service {{ zephlet_name_pascal }} {
     rpc start (Empty) returns (MsgZephletStatus);
     rpc stop (Empty) returns (MsgZephletStatus);
     rpc get_status (Empty) returns (MsgZephletStatus);
-    rpc config (Msg{{ zephlet_name_pascal }}Zephlet.Config) returns (Msg{{ zephlet_name_pascal }}Zephlet.Config);
-    rpc get_config (Empty) returns (Msg{{ zephlet_name_pascal }}Zephlet.Config);
+    rpc config (MsgZlet{{ zephlet_name_pascal }}.Config) returns (MsgZlet{{ zephlet_name_pascal }}.Config);
+    rpc get_config (Empty) returns (MsgZlet{{ zephlet_name_pascal }}.Config);
     /* This will report the {{ zephlet_name_lower }} events */
-    rpc get_events (Empty) returns (stream Msg{{ zephlet_name_pascal }}Zephlet.Events);
+    rpc get_events (Empty) returns (stream MsgZlet{{ zephlet_name_pascal }}.Events);
 {% endif %}
 }
