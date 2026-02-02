@@ -54,12 +54,12 @@ Uses `just` (mps2/an385 board):
 ### Adapters
 
 Listen to zephlet report → invoke another zephlet. No direct coupling.
-Example: `TickZephlet+UiZephlet_adapter.c` listens tick reports → calls `ui_zephlet_blink()`.
+Example: `ZletTick+ZletUi_adapter.c` listens tick reports → calls `zlet_ui_blink()`.
 Uses `ZBUS_ASYNC_LISTENER_DEFINE()` + `ZBUS_CHAN_ADD_OBS()`. Kconfig toggleable.
 
 ### Protobuf (nanopb)
 
-`Msg<Zephlet>Zephlet { Config{}, Events{}, Invoke{oneof}, Report{oneof} }`. Invoke: start/stop/get_status/config/get_config+custom. Report: status/config+events. Import "zephlet.proto" for Empty/MsgZephletStatus. Use `option (nanopb_fileopt).anonymous_oneof = true`. Query: get_status/get_config → reports. PROTO_FILES_LIST → nanopb.
+`MsgZlet<Zephlet> { Config{}, Events{}, Invoke{oneof}, Report{oneof} }`. Invoke: start/stop/get_status/config/get_config+custom. Report: status/config+events. Import "zephlet.proto" for Empty/MsgZephletStatus. Use `option (nanopb_fileopt).anonymous_oneof = true`. Query: get_status/get_config → reports. PROTO_FILES_LIST → nanopb.
 
 ## Build System
 
@@ -89,19 +89,19 @@ Auto-generates: adapter.c, Kconfig entry, CMakeLists.txt entry. Parses protos fo
 
 Via Kconfig in `prj.conf`:
 
-- `CONFIG_<ZEPHLET>_ZEPHLET=y` / `CONFIG_<ZEPHLET>_LOG_LEVEL_DBG=y`
+- `CONFIG_ZEPHLET_<ZEPHLET>=y` / `CONFIG_ZEPHLET_<ZEPHLET>_LOG_LEVEL_DBG=y`
 - `CONFIG_<ADAPTER>_ADAPTER=y`
   Current: All zephlets + debug logging enabled.
 
 ## Naming
 
-- **Files:** `<zephlet>_zephlet_interface.h/_interface.c/.c/.proto`, `<Origin>+<Destiny>_adapter.c`
+- **Files:** `zlet_<zephlet>_interface.h/_interface.c/.c/.proto`, `Zlet<Origin>+Zlet<Destiny>_adapter.c`
 - **Channels:** `chan_<zephlet>_{invoke|report}`
 - **Listeners:** `lis_<zephlet>`, `lis_<origin>_to_<destiny>_adapter`
 - **Messages:** `msg_<zephlet>_{invoke|report}` (proto-generated)
 - **Structs:** `<zephlet>_data`, `<zephlet>_api`, `ZEPHLET_DEFINE(<zephlet>,...)`
 - **Functions:** `<zephlet>_<cmd>()` (inline), `static int <cmd>(zephlet*)`, `<zephlet>_init_fn()`, `<zephlet>_set_implementation()`
-- **Config:** `CONFIG_<ZEPHLET>_ZEPHLET`, `CONFIG_<ADAPTER>_ADAPTER`, `CONFIG_<ZEPHLET>_LOG_LEVEL_DBG`
+- **Config:** `CONFIG_ZEPHLET_<ZEPHLET>`, `CONFIG_<ADAPTER>_ADAPTER`, `CONFIG_ZEPHLET_<ZEPHLET>_LOG_LEVEL_DBG`
 
 ## Data Flow
 
@@ -152,4 +152,4 @@ Script: `zephlets/shared/codegen/generate_adapter.py`. Parses origin proto (Repo
 
 **Auto-updates:** Kconfig (before `module =` with proper blank line spacing), CMakeLists.txt (after last zephyr_library_sources). Manual fallback on failure.
 
-**Naming:** File=`<Origin>Zephlet+<Dest>Zephlet_adapter.c`, Config=`CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER`, Listener=`lis_<origin>_to_<dest>_adapter`
+**Naming:** File=`Zlet<Origin>+Zlet<Dest>_adapter.c`, Config=`CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER`, Listener=`lis_<origin>_to_<dest>_adapter`
