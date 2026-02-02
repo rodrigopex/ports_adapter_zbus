@@ -16,7 +16,7 @@ Uses `just` (mps2/an385 board):
 - `just config` / `just ds` / `just da`
 - `just gen_service_files <service>`
 - `just new_adapter_interactive` / `just new_adapter <origin> <dest>`
-Underlying: `west build -d ./build -b mps2/an385 .`
+  Underlying: `west build -d ./build -b mps2/an385 .`
 
 ## Architecture
 
@@ -32,14 +32,14 @@ Underlying: `west build -d ./build -b mps2/an385 .`
 
 - `chan_<service>_invoke`: Receives commands (START/STOP/CONFIG/etc)
 - `chan_<service>_report`: Publishes status/events
-Services listen (sync/async), publish to report channel.
+  Services listen (sync/async), publish to report channel.
 
 ### Service Structure
 
-**Three files:** _interface.h (data/API/inline funcs), _interface.c (channels/dispatcher/registration), .c (logic). Plus: .proto, CMakeLists, Kconfig, module.yml
+**Three files:** \_interface.h (data/API/inline funcs), \_interface.c (channels/dispatcher/registration), .c (logic). Plus: .proto, CMakeLists, Kconfig, module.yml
 
-**_interface.h:** `<service>_data` (state+spinlock), `<service>_api` (func ptrs), inline `<service>_start(timeout)` → pub invoke chan
-**_interface.c:** Dispatcher (switch/case oneof tags), `<service>_set_implementation()`
+**\_interface.h:** `<service>_data` (state+spinlock), `<service>_api` (func ptrs), inline `<service>_start(timeout)` → pub invoke chan
+**\_interface.c:** Dispatcher (switch/case oneof tags), `<service>_set_implementation()`
 **.c:** Logic, K_SPINLOCK updates, pub reports, ends with `SERVICE_DEFINE(<service>, init_fn, &api, &data)`
 **Shared:** `struct service` + `SERVICE_DEFINE()` → `STRUCT_SECTION_ITERABLE` discovery
 
@@ -67,18 +67,19 @@ Uses `ZBUS_ASYNC_LISTENER_DEFINE()` + `ZBUS_CHAN_ADD_OBS()`. Kconfig toggleable.
 
 ## Creating Services
 
-**Workflow:** `just new_service_interactive` → Copier creates .proto/.c/CMakeLists/Kconfig/module.yml → Edit .proto (Config/Events/RPCs) → Edit .c (TODOs) → Add to root CMakeLists EXTRA_ZEPHYR_MODULES → Enable CONFIG_<SERVICE>_SERVICE=y → `just c b r`
+**Workflow:** `just new_service_interactive` → Copier creates .proto/.c/CMakeLists/Kconfig/module.yml → Edit .proto (Config/Events/RPCs) → Edit .c (TODOs) → Add to root CMakeLists EXTRA*ZEPHYR_MODULES → Enable CONFIG*<SERVICE>\_SERVICE=y → `just c b r`
 
-**Build-time codegen:** .proto changes → auto-regen _interface.h/_interface.c/<service>.h/.pb.h/.pb.c (like nanopb). Manual: `just gen_service_files <service>`
+**Build-time codegen:** .proto changes → auto-regen \_interface.h/\_interface.c/<service>.h/.pb.h/.pb.c (like nanopb). Manual: `just gen_service_files <service>`
 
-**Files:** VCS: .proto, .c, CMakeLists, Kconfig, module.yml. Build: _interface.h, _interface.c, <service>.h, .pb.h, .pb.c
+**Files:** VCS: .proto, .c, CMakeLists, Kconfig, module.yml. Build: \_interface.h, \_interface.c, <service>.h, .pb.h, .pb.c
 
 ## Creating Adapters
 
 **Workflow:**
+
 1. `just new_adapter_interactive` → select origin/dest → select report fields
 2. Implement TODO comments in generated `<Origin>Service+<Dest>Service_adapter.c`
-3. `just c b r` → Enabled by default (CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=y)
+3. `just c b r` → Enabled by default (CONFIG*<ORIGIN>\_TO*<DEST>\_ADAPTER=y)
 
 **Non-interactive:** `just new_adapter <origin> <dest>` (generates all report fields)
 
@@ -90,7 +91,7 @@ Via Kconfig in `prj.conf`:
 
 - `CONFIG_<SERVICE>_SERVICE=y` / `CONFIG_<SERVICE>_LOG_LEVEL_DBG=y`
 - `CONFIG_<ADAPTER>_ADAPTER=y`
-Current: All services + debug logging enabled.
+  Current: All services + debug logging enabled.
 
 ## Naming
 
@@ -108,7 +109,7 @@ Init: init_fn → register impl. Start: inline func → invoke chan → dispatch
 
 ## Principles
 
-Loose coupling (zbus only). Separation (.h/.c/_impl.c). Single return (`ret`, `goto end`). No direct deps (except inline API). Composition via adapters. Type safety (proto/structs). Thread safety (K_SPINLOCK). Pluggable (registration). Async (ZBUS_ASYNC_LISTENER). Lifecycle (START/STOP/get_status/get_config). Auto discovery (STRUCT_SECTION_ITERABLE).
+Loose coupling (zbus only). Separation (.h/.c/\_impl.c). Single return (`ret`, `goto end`), expect for guards, you can have several. No direct deps (except inline API). Composition via adapters. Type safety (proto/structs). Thread safety (K_SPINLOCK). Pluggable (registration). Async (ZBUS_ASYNC_LISTENER). Lifecycle (START/STOP/get_status/get_config). Auto discovery (STRUCT_SECTION_ITERABLE).
 
 ## Code Generation
 
@@ -118,12 +119,13 @@ PROTO_FILES_LIST → zephyr_nanopb_sources() → .pb.h/.pb.c (build dir). Don't 
 
 ### Service Generator
 
-Script: `services/shared/codegen/generate_service.py`. Proto → _interface.h/_interface.c/<service>.h/.c template. Never overwrites .c.
+Script: `services/shared/codegen/generate_service.py`. Proto → \_interface.h/\_interface.c/<service>.h/.c template. Never overwrites .c.
 
-**Generated:** _interface.h (data/API/inline funcs), _interface.c (channels/dispatcher), <service>.h (report helpers), .c template
+**Generated:** \_interface.h (data/API/inline funcs), \_interface.c (channels/dispatcher), <service>.h (report helpers), .c template
 **Hand-written:** .proto, .c (business logic)
 
 **Workflow:**
+
 - New: Write .proto → `just gen_service_files <s>` → complete .c → build
 - Modify: Edit .proto → regen (no --generate-impl) → update .c → build
 
