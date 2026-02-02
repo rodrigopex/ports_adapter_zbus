@@ -14,7 +14,7 @@ static inline int {{ zephlet_name }}_report_{{ field.name }}(k_timeout_t timeout
 			     timeout);
 }
 {%- else %}
-{%- if field.message_type == 'MsgServiceStatus' %}
+{%- if field.message_type == 'MsgZephletStatus' %}
 
 static inline int {{ zephlet_name }}_report_{{ field.name }}(const struct msg_zephlet_status *status,
 					     k_timeout_t timeout)
