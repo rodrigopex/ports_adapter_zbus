@@ -1,4 +1,4 @@
-config POSITION_ZEPHLET
+config ZEPHLET_POSITION
     bool "Position Zephlet Module"
     select NANOPB
     select ZBUS
@@ -7,10 +7,10 @@ config POSITION_ZEPHLET
       Enable this option to include the Position Zephlet Module in the build.
       Position Zephlet Module.
 
-if(POSITION_ZEPHLET)
+if(ZEPHLET_POSITION)
 
-module = POSITION_ZEPHLET
-module-str = position_zephlet
+module = ZEPHLET_POSITION
+module-str = zlet_position
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

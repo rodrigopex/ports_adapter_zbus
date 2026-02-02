@@ -5,7 +5,7 @@ import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgBatteryZephlet {
+message MsgZletBattery {
     message Config {
       int32 voltage_operation = 1; /* In millivolts */
       int32 low_battery_threshold = 2; /* In percentage */
@@ -50,9 +50,9 @@ service Battery {
   rpc start (Empty) returns (MsgZephletStatus);
   rpc stop (Empty) returns (MsgZephletStatus);
   rpc get_status (Empty) returns (MsgZephletStatus);
-  rpc config (MsgBatteryZephlet.Config) returns (MsgBatteryZephlet.Config);
-  rpc get_config (Empty) returns (MsgBatteryZephlet.Config);
-  rpc get_battery_state (Empty) returns (MsgBatteryZephlet.BatteryState);
+  rpc config (MsgZletBattery.Config) returns (MsgZletBattery.Config);
+  rpc get_config (Empty) returns (MsgZletBattery.Config);
+  rpc get_battery_state (Empty) returns (MsgZletBattery.BatteryState);
   /* This will report the battery events */
-  rpc get_events (Empty) returns (stream MsgBatteryZephlet.Events);
+  rpc get_events (Empty) returns (stream MsgZletBattery.Events);
 }

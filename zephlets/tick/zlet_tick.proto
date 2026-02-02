@@ -5,7 +5,7 @@ import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgTickZephlet {
+message MsgZletTick {
   message Config {
     uint32 delay_ms = 1;
   }
@@ -39,8 +39,8 @@ service Tick {
   rpc start (Empty) returns (MsgZephletStatus);
   rpc stop (Empty) returns (MsgZephletStatus);
   rpc get_status (Empty) returns (MsgZephletStatus);
-  rpc config (MsgTickZephlet.Config) returns (MsgTickZephlet.Config);
-  rpc get_config (Empty) returns (MsgTickZephlet.Config);
+  rpc config (MsgZletTick.Config) returns (MsgZletTick.Config);
+  rpc get_config (Empty) returns (MsgZletTick.Config);
   /* This will report the tick events */
-  rpc get_events (Empty) returns (stream MsgTickZephlet.Events);
+  rpc get_events (Empty) returns (stream MsgZletTick.Events);
 }

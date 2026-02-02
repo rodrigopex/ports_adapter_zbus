@@ -1,18 +1,18 @@
 /* GENERATED FILE - DO NOT EDIT */
 /* Complete TODO items and remove this header when implementation is done */
 
-#include "ui_zephlet_interface.h"
+#include "zlet_battery_interface.h"
 
-#include "ui_zephlet.h"
+#include "zlet_battery.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_DECLARE(ui_zephlet, CONFIG_UI_ZEPHLET_LOG_LEVEL);
+LOG_MODULE_DECLARE(battery_zephlet, CONFIG_ZEPHLET_BATTERY_LOG_LEVEL);
 
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)
 {
-	struct ui_zephlet_data *data = zephlet->data;
+	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
@@ -22,12 +22,12 @@ static int start(const struct zephlet *zephlet)
 
 	/* TODO: Start zephlet resources (timers, threads, etc.) */
 
-	return ui_zephlet_report_status(&status, K_MSEC(250));
+	return zlet_battery_report_status(&status, K_MSEC(250));
 }
 
 static int stop(const struct zephlet *zephlet)
 {
-	struct ui_zephlet_data *data = zephlet->data;
+	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
@@ -44,24 +44,24 @@ static int stop(const struct zephlet *zephlet)
 		data->status.is_running = false;
 	}
 
-	return ui_zephlet_report_status(&status, K_MSEC(250));
+	return zlet_battery_report_status(&status, K_MSEC(250));
 }
 
 static int get_status(const struct zephlet *zephlet)
 {
-	struct ui_zephlet_data *data = zephlet->data;
+	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
-	return ui_zephlet_report_status(&status, K_MSEC(250));
+	return zlet_battery_report_status(&status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_ui_zephlet_config *config)
+static int config(const struct zephlet *zephlet, const struct msg_zlet_battery_config *config)
 {
-	struct ui_zephlet_data *data = zephlet->data;
+	struct zlet_battery_data *data = zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
@@ -69,25 +69,38 @@ static int config(const struct zephlet *zephlet, const struct msg_ui_zephlet_con
 
 	/* TODO: Apply configuration changes to zephlet resources */
 
-	return ui_zephlet_report_config(config, K_MSEC(250));
+	return zlet_battery_report_config(config, K_MSEC(250));
 }
 
 static int get_config(const struct zephlet *zephlet)
 {
-	struct ui_zephlet_data *data = zephlet->data;
-	struct msg_ui_zephlet_config config;
+	struct zlet_battery_data *data = zephlet->data;
+	struct msg_zlet_battery_config config;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
-	return ui_zephlet_report_config(&config, K_MSEC(250));
+	return zlet_battery_report_config(&config, K_MSEC(250));
 }
 
-/* RPC returns MsgUIZephlet.Events - publish to report field: events */
+/* RPC returns MsgBatteryZephlet.BatteryState - publish to report field: battery_state */
+static int get_battery_state(const struct zephlet *zephlet)
+{
+	struct zlet_battery_data *data = zephlet->data;
+
+	K_SPINLOCK(&data->lock) {
+		/* TODO: Implement get_battery_state logic */
+	}
+	/* TODO: Prepare report data and publish */
+	/* return zlet_battery_report_battery_state(report_data, K_MSEC(250)); */
+	return 0;
+}
+
+/* RPC returns MsgBatteryZephlet.Events - publish to report field: events */
 static int get_events(const struct zephlet *zephlet)
 {
-	struct ui_zephlet_data *data = zephlet->data;
+	struct zlet_battery_data *data = zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
 		/* TODO: Implement get_events logic */
@@ -95,49 +108,36 @@ static int get_events(const struct zephlet *zephlet)
 	/* Output-streaming RPC: publish events from async contexts (timer/IRQ) */
 	/* Pattern example (see tick_zephlet_impl.c:11-18):
 	 *   void timer_handler(struct k_timer *timer) {
-	 *       struct msg_ui_zephlet_events event = {...};
-	 *       ui_zephlet_report_events(&event, K_NO_WAIT);
+	 *       struct msg_zlet_battery_events event = {...};
+	 *       zlet_battery_report_events(&event, K_NO_WAIT);
 	 *   }
 	 */
 	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
 	return 0;
 }
 
-/* RPC returns Empty - publish to report field: empty */
-static int blink(const struct zephlet *zephlet)
-{
-	struct ui_zephlet_data *data = zephlet->data;
-
-	K_SPINLOCK(&data->lock) {
-		/* TODO: Implement blink logic */
-	}
-	/* Request-response RPC */
-	LOG_DBG("blink!");
-	/* TODO: Prepare report data and publish */
-	/* return ui_zephlet_report_empty(report_data, K_MSEC(250)); */
-	return 0;
-}
-
-static struct ui_zephlet_api api = {
+static struct zlet_battery_api api = {
 	.start = start,
 	.stop = stop,
 	.get_status = get_status,
 	.config = config,
 	.get_config = get_config,
+	.get_battery_state = get_battery_state,
 	.get_events = get_events,
-	.blink = blink,
 };
 
-static struct ui_zephlet_data data = {.config = MSG_UI_ZEPHLET_CONFIG_INIT_ZERO,
-				      .status = {.is_running = false}};
+static struct zlet_battery_data data = {
+	.config = MSG_ZLET_BATTERY_CONFIG_INIT_ZERO,
+	.status = {.is_running = false}
+};
 
-int ui_zephlet_init_fn(const struct zephlet *self)
+int zlet_battery_init_fn(const struct zephlet *self)
 {
-	int err = ui_zephlet_set_implementation(self);
+	int err = zlet_battery_set_implementation(self);
 
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 
 	return err;
 }
 
-ZEPHLET_DEFINE(ui_zephlet, ui_zephlet_init_fn, &api, &data);
+ZEPHLET_DEFINE(zlet_battery, zlet_battery_init_fn, &api, &data);

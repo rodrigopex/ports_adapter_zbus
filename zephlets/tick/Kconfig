@@ -1,4 +1,4 @@
-config TICK_ZEPHLET
+config ZEPHLET_TICK
     bool "Tick Zephlet Module"
     select NANOPB
     select ZBUS
@@ -6,10 +6,10 @@ config TICK_ZEPHLET
     help
       Enable this option to include the tick zephlet module which provides periodic tick functionality.
 
-if(TICK_ZEPHLET)
+if(ZEPHLET_TICK)
 
-module = TICK_ZEPHLET
-module-str = tick_zephlet
+module = ZEPHLET_TICK
+module-str = zlet_tick
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

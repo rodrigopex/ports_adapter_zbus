@@ -5,7 +5,7 @@ import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgUIZephlet {
+message MsgZletUi {
   message Config {
     // No configuration needed yet
   }
@@ -39,8 +39,8 @@ service UI {
   rpc start (Empty) returns (MsgZephletStatus);
   rpc stop (Empty) returns (MsgZephletStatus);
   rpc get_status (Empty) returns (MsgZephletStatus);
-  rpc config (MsgUIZephlet.Config) returns (MsgUIZephlet.Config);
-  rpc get_config (Empty) returns (MsgUIZephlet.Config);
-  rpc get_events (Empty) returns (stream MsgUIZephlet.Events);
+  rpc config (MsgZletUi.Config) returns (MsgZletUi.Config);
+  rpc get_config (Empty) returns (MsgZletUi.Config);
+  rpc get_events (Empty) returns (stream MsgZletUi.Events);
   rpc blink (Empty) returns (Empty);
 }

@@ -1,4 +1,4 @@
-config STORAGE_ZEPHLET
+config ZEPHLET_STORAGE
     bool "Storage Zephlet Module"
     select NANOPB
     select ZBUS
@@ -7,10 +7,10 @@ config STORAGE_ZEPHLET
       Enable this option to include the Storage Zephlet Module in the build.
       Storage Zephlet Module.
 
-if(STORAGE_ZEPHLET)
+if(ZEPHLET_STORAGE)
 
-module = STORAGE_ZEPHLET
-module-str = storage_zephlet
+module = ZEPHLET_STORAGE
+module-str = zlet_storage
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

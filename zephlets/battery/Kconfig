@@ -1,4 +1,4 @@
-config BATTERY_ZEPHLET
+config ZEPHLET_BATTERY
     bool "Battery Zephlet Module"
     select NANOPB
     select ZBUS
@@ -7,10 +7,10 @@ config BATTERY_ZEPHLET
       Enable this option to include the Battery Zephlet Module in the build.
       Battery Zephlet Module.
 
-if(BATTERY_ZEPHLET)
+if(ZEPHLET_BATTERY)
 
-module = BATTERY_ZEPHLET
-module-str = battery_zephlet
+module = ZEPHLET_BATTERY
+module-str = zlet_battery
 source "subsys/logging/Kconfig.template.log_config"
 
 endif

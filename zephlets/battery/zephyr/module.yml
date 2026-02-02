@@ -1,4 +1,4 @@
-name: battery_zephlet
+name: zlet_battery
 build:
   cmake: .
   kconfig: Kconfig

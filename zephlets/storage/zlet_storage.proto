@@ -5,7 +5,7 @@ import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgStorageZephlet {
+message MsgZletStorage {
     message Config {
         // TODO: Add configuration fields specific to Storage
     }
@@ -46,10 +46,10 @@ service Storage {
     rpc start (Empty) returns (MsgZephletStatus);
     rpc stop (Empty) returns (MsgZephletStatus);
     rpc get_status (Empty) returns (MsgZephletStatus);
-    rpc config (MsgStorageZephlet.Config) returns (MsgStorageZephlet.Config);
-    rpc get_config (Empty) returns (MsgStorageZephlet.Config);
-    rpc store (MsgStorageZephlet.KeyValue) returns (Empty);
+    rpc config (MsgZletStorage.Config) returns (MsgZletStorage.Config);
+    rpc get_config (Empty) returns (MsgZletStorage.Config);
+    rpc store (MsgZletStorage.KeyValue) returns (Empty);
     /* This will report the storage events */
-    rpc get_events (Empty) returns (stream MsgStorageZephlet.Events);
+    rpc get_events (Empty) returns (stream MsgZletStorage.Events);
 
 }

@@ -5,7 +5,7 @@ import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgPositionZephlet {
+message MsgZletPosition {
     message Config {
         // TODO: Add configuration fields specific to Position
     }
@@ -41,9 +41,9 @@ service Position {
     rpc start (Empty) returns (MsgZephletStatus);
     rpc stop (Empty) returns (MsgZephletStatus);
     rpc get_status (Empty) returns (MsgZephletStatus);
-    rpc config (MsgPositionZephlet.Config) returns (MsgPositionZephlet.Config);
-    rpc get_config (Empty) returns (MsgPositionZephlet.Config);
+    rpc config (MsgZletPosition.Config) returns (MsgZletPosition.Config);
+    rpc get_config (Empty) returns (MsgZletPosition.Config);
     /* This will report the position events */
-    rpc get_events (Empty) returns (stream MsgPositionZephlet.Events);
+    rpc get_events (Empty) returns (stream MsgZletPosition.Events);
 
 }
