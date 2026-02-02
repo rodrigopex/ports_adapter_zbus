@@ -1,11 +1,11 @@
 syntax = "proto3";
 
 import "nanopb.proto";
-import "service.proto";
+import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgUIService {
+message MsgUIZephlet {
   message Config {
     // No configuration needed yet
   }
@@ -28,19 +28,19 @@ message MsgUIService {
 
   message Report {
     oneof ui_report {
-      MsgServiceStatus status = 1;
+      MsgZephletStatus status = 1;
       Config config = 2;
       Events events = 3;
     }
   }
 }
 
-service UIService {
-  rpc start (Empty) returns (MsgServiceStatus);
-  rpc stop (Empty) returns (MsgServiceStatus);
-  rpc get_status (Empty) returns (MsgServiceStatus);
-  rpc config (MsgUIService.Config) returns (MsgUIService.Config);
-  rpc get_config (Empty) returns (MsgUIService.Config);
-  rpc get_events (Empty) returns (stream MsgUIService.Events);
+service UIZephlet {
+  rpc start (Empty) returns (MsgZephletStatus);
+  rpc stop (Empty) returns (MsgZephletStatus);
+  rpc get_status (Empty) returns (MsgZephletStatus);
+  rpc config (MsgUIZephlet.Config) returns (MsgUIZephlet.Config);
+  rpc get_config (Empty) returns (MsgUIZephlet.Config);
+  rpc get_events (Empty) returns (stream MsgUIZephlet.Events);
   rpc blink (Empty) returns (Empty);
 }

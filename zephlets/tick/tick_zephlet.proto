@@ -1,11 +1,11 @@
 syntax = "proto3";
 
 import "nanopb.proto";
-import "service.proto";
+import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgTickService {
+message MsgTickZephlet {
   message Config {
     uint32 delay_ms = 1;
   }
@@ -28,19 +28,19 @@ message MsgTickService {
 
   message Report {
     oneof tick_report {
-      MsgServiceStatus status = 1;
+      MsgZephletStatus status = 1;
       Config config = 2;
       Events events = 3;
     }
   }
 }
 
-service TickService {
-  rpc start (Empty) returns (MsgServiceStatus);
-  rpc stop (Empty) returns (MsgServiceStatus);
-  rpc get_status (Empty) returns (MsgServiceStatus);
-  rpc config (MsgTickService.Config) returns (MsgTickService.Config);
-  rpc get_config (Empty) returns (MsgTickService.Config);
+service TickZephlet {
+  rpc start (Empty) returns (MsgZephletStatus);
+  rpc stop (Empty) returns (MsgZephletStatus);
+  rpc get_status (Empty) returns (MsgZephletStatus);
+  rpc config (MsgTickZephlet.Config) returns (MsgTickZephlet.Config);
+  rpc get_config (Empty) returns (MsgTickZephlet.Config);
   /* This will report the tick events */
-  rpc get_events (Empty) returns (stream MsgTickService.Events);
+  rpc get_events (Empty) returns (stream MsgTickZephlet.Events);
 }

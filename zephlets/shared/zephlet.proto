@@ -8,6 +8,6 @@ message _ {}
 
 message Empty {}
 
-message MsgServiceStatus {
+message MsgZephletStatus {
   bool is_running = 1;
 }

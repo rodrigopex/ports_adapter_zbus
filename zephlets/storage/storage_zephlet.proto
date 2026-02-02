@@ -1,11 +1,11 @@
 syntax = "proto3";
 
 import "nanopb.proto";
-import "service.proto";
+import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
-message MsgStorageService {
+message MsgStorageZephlet {
     message Config {
         // TODO: Add configuration fields specific to Storage
     }
@@ -34,22 +34,22 @@ message MsgStorageService {
 
     message Report {
         oneof storage_report {
-            MsgServiceStatus status = 1;
+            MsgZephletStatus status = 1;
             Config config = 2;
             Events events = 3;
         }
     }
 }
 
-service StorageService {
+service StorageZephlet {
 
-    rpc start (Empty) returns (MsgServiceStatus);
-    rpc stop (Empty) returns (MsgServiceStatus);
-    rpc get_status (Empty) returns (MsgServiceStatus);
-    rpc config (MsgStorageService.Config) returns (MsgStorageService.Config);
-    rpc get_config (Empty) returns (MsgStorageService.Config);
-    rpc store (MsgStorageService.KeyValue) returns (Empty);
+    rpc start (Empty) returns (MsgZephletStatus);
+    rpc stop (Empty) returns (MsgZephletStatus);
+    rpc get_status (Empty) returns (MsgZephletStatus);
+    rpc config (MsgStorageZephlet.Config) returns (MsgStorageZephlet.Config);
+    rpc get_config (Empty) returns (MsgStorageZephlet.Config);
+    rpc store (MsgStorageZephlet.KeyValue) returns (Empty);
     /* This will report the storage events */
-    rpc get_events (Empty) returns (stream MsgStorageService.Events);
+    rpc get_events (Empty) returns (stream MsgStorageZephlet.Events);
 
 }

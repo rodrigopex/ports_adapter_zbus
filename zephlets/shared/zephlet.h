@@ -1,21 +1,21 @@
-#ifndef MODULES_SERVICES_SHARED_SERVICE_H
-#define MODULES_SERVICES_SHARED_SERVICE_H
+#ifndef MODULES_ZEPHLETS_SHARED_ZEPHLET_H
+#define MODULES_ZEPHLETS_SHARED_ZEPHLET_H
 
 #include <zephyr/kernel.h>
 
-struct service {
+struct zephlet {
 	const char *name;
 	struct {
 		const struct zbus_channel *invoke;
 		const struct zbus_channel *report;
 	} channel;
-	int (*init_fn)(const struct service *self);
+	int (*init_fn)(const struct zephlet *self);
 	void *api;
 	void *const data;
 };
 
-#define SERVICE_DEFINE(_name, _init_fn, _api, _data)                                               \
-	const STRUCT_SECTION_ITERABLE(service, _name) = {                                          \
+#define ZEPHLET_DEFINE(_name, _init_fn, _api, _data)                                               \
+	const STRUCT_SECTION_ITERABLE(zephlet, _name) = {                                          \
 		.name = #_name,                                                                    \
 		.channel =                                                                         \
 			{                                                                          \
@@ -26,4 +26,4 @@ struct service {
 		.api = _api,                                                                       \
 		.data = _data}
 
-#endif /* MODULES_SERVICES_SHARED_SERVICE_H */
+#endif /* MODULES_ZEPHLETS_SHARED_ZEPHLET_H */
