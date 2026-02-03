@@ -9,6 +9,16 @@
 
 LOG_MODULE_DECLARE(zlet_position, CONFIG_ZEPHLET_POSITION_LOG_LEVEL);
 
+static struct {
+	struct msg_zephlet_status status;
+	struct msg_zlet_position_config config;
+	struct msg_zlet_position_events events;
+} self = {
+	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
+	.config = MSG_ZLET_POSITION_CONFIG_INIT_ZERO,
+	.events = MSG_ZLET_POSITION_EVENTS_INIT_ZERO,
+};
+
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)
 {
@@ -84,23 +94,17 @@ static int get_config(const struct zephlet *zephlet)
 	return zlet_position_report_config(&config, K_MSEC(250));
 }
 
-/* RPC returns MsgPositionZephlet.Events - publish to report field: events */
+/* RPC returns MsgZletPosition.Events - publish to report field: events */
 static int get_events(const struct zephlet *zephlet)
 {
 	struct zlet_position_data *data = zephlet->data;
+	struct msg_zlet_position_events events;
 
 	K_SPINLOCK(&data->lock) {
-		/* TODO: Implement get_events logic */
+		events = self.events;
 	}
-	/* Output-streaming RPC: publish events from async contexts (timer/IRQ) */
-	/* Pattern example (see tick_zephlet_impl.c:11-18):
-	 *   void timer_handler(struct k_timer *timer) {
-	 *       struct msg_zlet_position_events event = {...};
-	 *       zlet_position_report_events(&event, K_NO_WAIT);
-	 *   }
-	 */
-	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
-	return 0;
+
+	return zbus_chan_pub(&chan_zlet_position_report, &events, K_MSEC(250));
 }
 
 static struct zlet_position_api api = {

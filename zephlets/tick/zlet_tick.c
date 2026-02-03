@@ -1,12 +1,21 @@
-#include "tick/zlet_tick.pb.h"
 #include "zlet_tick_interface.h"
 
 #include "zlet_tick.h"
-#include "zephyr/kernel.h"
-#include "zephyr/zbus/zbus.h"
+#include <zephyr/kernel.h>
+#include <zephyr/zbus/zbus.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zlet_tick, CONFIG_ZEPHLET_TICK_LOG_LEVEL);
+
+static struct {
+	struct msg_zephlet_status status;
+	struct msg_zlet_tick_report config;
+	struct msg_zlet_tick_events events;
+} self = {
+	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
+	.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
+	.events = MSG_ZLET_TICK_EVENTS_INIT_ZERO,
+};
 
 void zlet_tick_handler(struct k_timer *timer_id)
 {
@@ -90,16 +99,17 @@ static int get_config(const struct zephlet *zephlet)
 	return zlet_tick_report_config(&config, K_MSEC(250));
 }
 
-/* RPC returns MsgBatteryZephlet.Events - publish to report field: events */
+/* RPC returns MsgZletTick.Events - publish to report field: events */
 static int get_events(const struct zephlet *zephlet)
 {
 	struct zlet_tick_data *data = zephlet->data;
+	struct msg_zlet_tick_events events;
 
 	K_SPINLOCK(&data->lock) {
-		/* TODO: Implement get_events logic */
+		events = self.events;
 	}
-	/* TODO: Set up K_TIMER_DEFINE/K_WORK_DEFINE and call report helper */
-	return 0;
+
+	return zbus_chan_pub(&chan_zlet_tick_report, &events, K_MSEC(250));
 }
 
 static struct zlet_tick_api api = {
@@ -112,7 +122,7 @@ static struct zlet_tick_api api = {
 };
 
 static struct zlet_tick_data data = {.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
-					.status = {.is_running = false}};
+				     .status = {.is_running = false}};
 
 int zlet_tick_init_fn(const struct zephlet *self)
 {
