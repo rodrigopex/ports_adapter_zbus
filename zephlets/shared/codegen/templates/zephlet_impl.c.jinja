@@ -132,6 +132,20 @@ static int {{ method.name }}(const struct zephlet *zephlet
 	return {{ zephlet_name }}_report_config(&config, K_MSEC(250));
 }
 {%- endif %}
+{%- elif method.report_field_name == 'events' and method.name == 'get_events' %}
+
+/* RPC returns {{ method.output_type }} - publish to report field: {{ method.report_field_name }} */
+static int get_events(const struct zephlet *zephlet)
+{
+	struct {{ zephlet_name }}_data *data = zephlet->data;
+	struct msg_{{ zephlet_name }}_events events;
+
+	K_SPINLOCK(&data->lock) {
+		events = data->events;
+	}
+
+	return {{ zephlet_name }}_report_events(&events, K_MSEC(250));
+}
 {%- else %}
 
 /* RPC returns {{ method.output_type }} - publish to report field: {{ method.report_field_name }} */
@@ -202,10 +216,13 @@ static struct {{ zephlet_name }}_api api = {
 };
 
 static struct {{ zephlet_name }}_data data = {
+	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
 {%- if has_config %}
 	.config = MSG_{{ zephlet_name_upper }}_CONFIG_INIT_ZERO,
 {%- endif %}
-	.status = {.is_running = false}
+{%- if has_events %}
+	.events = MSG_{{ zephlet_name_upper }}_EVENTS_INIT_ZERO
+{%- endif %}
 };
 
 int {{ zephlet_name }}_init_fn(const struct zephlet *self)

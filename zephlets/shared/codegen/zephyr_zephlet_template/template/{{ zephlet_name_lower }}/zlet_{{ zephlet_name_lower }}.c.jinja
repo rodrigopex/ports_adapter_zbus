@@ -106,7 +106,7 @@ static int get_events(const struct zephlet *zephlet)
 		events = data->events;
 	}
 
-	return zbus_chan_pub(&chan_zlet_{{ zephlet_name_lower }}_report, &events, K_MSEC(250));
+	return zlet_{{ zephlet_name_lower }}_report_events(&events, K_MSEC(250));
 }
 {% endif %}
 

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+import "zephlet.proto";
+
+option (nanopb_fileopt).anonymous_oneof = true;
+
+message MsgZletSensor {
+    message Config {
+        uint32 sample_rate_ms = 1;
+    }
+
+    message Events {
+        int32 temperature = 1;
+        uint32 timestamp = 2;
+    }
+
+    message Invoke {
+        oneof command {
+            Empty start = 1;
+            Empty stop = 2;
+            Empty get_status = 3;
+            Config config = 4;
+            Empty get_config = 5;
+            Empty get_events = 6;
+        }
+    }
+
+    message Report {
+        oneof result {
+            MsgZephletStatus status = 1;
+            Config config = 2;
+            Events events = 3;
+        }
+    }
+}
+
+service ZletSensorService {
+    rpc start(Empty) returns (MsgZephletStatus);
+    rpc stop(Empty) returns (MsgZephletStatus);
+    rpc get_status(Empty) returns (MsgZephletStatus);
+    rpc config(MsgZletSensor.Config) returns (MsgZletSensor.Config);
+    rpc get_config(Empty) returns (MsgZletSensor.Config);
+    rpc get_events(Empty) returns (stream MsgZletSensor.Events);
+}

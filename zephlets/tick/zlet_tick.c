@@ -99,7 +99,7 @@ static int get_events(const struct zephlet *zephlet)
 		events = data->events;
 	}
 
-	return zbus_chan_pub(&chan_zlet_tick_report, &events, K_MSEC(250));
+	return zlet_tick_report_events(&events, K_MSEC(250));
 }
 
 static struct zlet_tick_api api = {

@@ -1,0 +1,16 @@
+config ZEPHLET_SENSOR
+    bool "Sensor Zephlet Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the Sensor Zephlet Module in the build.
+      This module provides sensor reading functionalities for the application.
+
+if(ZEPHLET_SENSOR)
+
+module = ZEPHLET_SENSOR
+module-str = zlet_sensor
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

@@ -16,6 +16,7 @@ set(EXTRA_ZEPHYR_MODULES
     "${SERVICES_PATH}/battery"
     "${SERVICES_PATH}/storage"
     "${SERVICES_PATH}/position"
+    "${SERVICES_PATH}/sensor"
 )
 message(WARNING "Extra Zephyr Modules Path: ${EXTRA_ZEPHYR_MODULES}")
 

@@ -107,7 +107,7 @@ static int get_events(const struct zephlet *zephlet)
 		events = data->events;
 	}
 
-	return zbus_chan_pub(&chan_zlet_battery_report, &events, K_MSEC(250));
+	return zlet_battery_report_events(&events, K_MSEC(250));
 }
 
 static struct zlet_battery_api api = {
