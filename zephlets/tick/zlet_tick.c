@@ -7,7 +7,7 @@
 
 LOG_MODULE_DECLARE(zlet_tick, CONFIG_ZEPHLET_TICK_LOG_LEVEL);
 
-void zlet_tick_handler(struct k_timer *timer_id)
+void zlet_tick_timer_handler(struct k_timer *timer_id)
 {
 	LOG_DBG("tick!");
 
@@ -16,7 +16,7 @@ void zlet_tick_handler(struct k_timer *timer_id)
 	zlet_tick_report_events(&events, K_NO_WAIT);
 }
 
-K_TIMER_DEFINE(timer_zlet_tick, zlet_tick_handler, NULL);
+K_TIMER_DEFINE(timer_zlet_tick, zlet_tick_timer_handler, NULL);
 
 static int start(const struct zephlet *zephlet)
 {

@@ -3,14 +3,14 @@
 # Auto-generates zephlet infrastructure (.h, .c, private/*_priv.h) during build
 
 function(zephyr_zephlet_generate ZEPHLET_NAME PROTO_FILE)
-  set(CODEGEN_SCRIPT "${CMAKE_SOURCE_DIR}/zephlets/shared/codegen/generate_zephlet.py")
+  set(CODEGEN_SCRIPT "${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/codegen/generate_zephlet.py")
   set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
   set(GENERATED_H "${OUTPUT_DIR}/${ZEPHLET_NAME}_interface.h")
   set(GENERATED_C "${OUTPUT_DIR}/${ZEPHLET_NAME}_interface.c")
   set(GENERATED_PRIV_H "${OUTPUT_DIR}/${ZEPHLET_NAME}.h")
 
-  file(GLOB TEMPLATE_FILES "${CMAKE_SOURCE_DIR}/zephlets/shared/codegen/templates/*.jinja")
+  file(GLOB TEMPLATE_FILES "${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/codegen/templates/*.jinja")
 
   # Check if .c exists in source, generate once if missing (bootstrap)
   set(IMPL_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${ZEPHLET_NAME}.c")
