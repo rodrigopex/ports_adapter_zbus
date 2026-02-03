@@ -1,4 +1,0 @@
-name: zlet_sensor
-build:
-  cmake: .
-  kconfig: Kconfig
