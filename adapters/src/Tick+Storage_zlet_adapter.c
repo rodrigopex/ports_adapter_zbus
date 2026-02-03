@@ -3,7 +3,6 @@
  * Auto-generated adapter from tick to storage
  */
 
-#include "tick/zlet_tick.pb.h"
 #include "zlet_tick_interface.h"
 #include "zlet_storage_interface.h"
 

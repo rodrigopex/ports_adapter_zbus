@@ -3,7 +3,6 @@
  * Auto-generated adapter from battery to storage
  */
 
-#include "battery/zlet_battery.pb.h"
 #include "zlet_battery_interface.h"
 #include "zlet_storage_interface.h"
 

@@ -1,9 +1,10 @@
-#include "tick/zlet_tick.pb.h"
 #include "zlet_tick_interface.h"
 #include "zlet_ui_interface.h"
+
 #include <zephyr/kernel.h>
 #include <zephyr/zbus/zbus.h>
 #include <zephyr/logging/log.h>
+
 LOG_MODULE_DECLARE(adapter, CONFIG_ADAPTERS_LOG_LEVEL);
 
 static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
