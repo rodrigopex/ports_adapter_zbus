@@ -54,7 +54,7 @@ Uses `just` (mps2/an385 board):
 ### Adapters
 
 Listen to zephlet report → invoke another zephlet. No direct coupling.
-Example: `ZletTick+ZletUi_adapter.c` listens tick reports → calls `zlet_ui_blink()`.
+Example: `Tick+Ui_zlet_adapter.c` listens tick reports → calls `zlet_ui_blink()`.
 Uses `ZBUS_ASYNC_LISTENER_DEFINE()` + `ZBUS_CHAN_ADD_OBS()`. Kconfig toggleable.
 
 ### Protobuf (nanopb)
@@ -95,7 +95,7 @@ Via Kconfig in `prj.conf`:
 
 ## Naming
 
-- **Files:** `zlet_<zephlet>_interface.h/_interface.c/.c/.proto`, `Zlet<Origin>+Zlet<Destiny>_adapter.c`
+- **Files:** `zlet_<zephlet>_interface.h/_interface.c/.c/.proto`, `<Origin>+<Destiny>_zlet_adapter.c`
 - **Channels:** `chan_<zephlet>_{invoke|report}`
 - **Listeners:** `lis_<zephlet>`, `lis_<origin>_to_<destiny>_adapter`
 - **Messages:** `msg_<zephlet>_{invoke|report}` (proto-generated)
@@ -152,4 +152,4 @@ Script: `zephlets/shared/codegen/generate_adapter.py`. Parses origin proto (Repo
 
 **Auto-updates:** Kconfig (before `module =` with proper blank line spacing), CMakeLists.txt (after last zephyr_library_sources). Manual fallback on failure.
 
-**Naming:** File=`Zlet<Origin>+Zlet<Dest>_adapter.c`, Config=`CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER`, Listener=`lis_<origin>_to_<dest>_adapter`
+**Naming:** File=`<Origin>+<Dest>_zlet_adapter.c`, Config=`CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER`, Listener=`lis_<origin>_to_<dest>_adapter`

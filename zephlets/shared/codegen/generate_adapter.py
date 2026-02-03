@@ -279,8 +279,8 @@ def build_adapter_context(origin, dest, selected_fields, dest_api_suggestions):
     elif dest_name.endswith('_zephlet'):
         dest_base = dest_name[:-8]
 
-    # Adapter name should be ZletOrigin+ZletDest_adapter (new pattern)
-    adapter_name = f"Zlet{snake_to_camel(origin_base)}+Zlet{snake_to_camel(dest_base)}_adapter"
+    # Adapter name should be Origin+Dest_zlet_adapter (new pattern)
+    adapter_name = f"{snake_to_camel(origin_base)}+{snake_to_camel(dest_base)}_zlet_adapter"
 
     context = {
         'origin_zephlet': origin_name,
