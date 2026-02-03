@@ -16,8 +16,8 @@ static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
 		break;
 	case MSG_ZLET_TICK_REPORT_EVENTS_TAG:
 		if (tick_report->events.has_tick) {
-			LOG_DBG("Received Tick Zephlet report at %lld, invoking UI Zephlet blink",
-				tick_report->events.tick);
+			LOG_DBG("Received Tick Zephlet report at %d, invoking UI Zephlet blink",
+				tick_report->events.timestamp);
 			zlet_ui_blink(K_NO_WAIT);
 		}
 		break;

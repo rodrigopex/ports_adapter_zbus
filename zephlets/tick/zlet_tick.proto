@@ -12,7 +12,7 @@ message MsgZletTick {
 
   message Events {
     int32 timestamp = 1;
-    optional int64 tick = 2;
+    optional Empty tick = 2;
   }
 
   message Invoke {
@@ -36,11 +36,11 @@ message MsgZletTick {
 }
 
 service Tick {
-  rpc start (Empty) returns (MsgZephletStatus);
-  rpc stop (Empty) returns (MsgZephletStatus);
-  rpc get_status (Empty) returns (MsgZephletStatus);
-  rpc config (MsgZletTick.Config) returns (MsgZletTick.Config);
-  rpc get_config (Empty) returns (MsgZletTick.Config);
+  rpc start(Empty) returns (MsgZephletStatus);
+  rpc stop(Empty) returns (MsgZephletStatus);
+  rpc get_status(Empty) returns (MsgZephletStatus);
+  rpc config(MsgZletTick.Config) returns (MsgZletTick.Config);
+  rpc get_config(Empty) returns (MsgZletTick.Config);
   /* This will report the tick events */
-  rpc get_events (Empty) returns (stream MsgZletTick.Events);
+  rpc get_events(Empty) returns (stream MsgZletTick.Events);
 }

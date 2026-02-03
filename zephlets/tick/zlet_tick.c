@@ -11,7 +11,7 @@ void zlet_tick_handler(struct k_timer *timer_id)
 {
 	LOG_DBG("tick!");
 
-	struct msg_zlet_tick_events events = {.has_tick = true, .tick = k_uptime_get()};
+	struct msg_zlet_tick_events events = {.timestamp = k_uptime_get(), .has_tick = true};
 
 	zlet_tick_report_events(&events, K_NO_WAIT);
 }
