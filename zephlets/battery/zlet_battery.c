@@ -9,16 +9,6 @@
 
 LOG_MODULE_DECLARE(zlet_battery, CONFIG_ZEPHLET_BATTERY_LOG_LEVEL);
 
-static struct {
-	struct msg_zephlet_status status;
-	struct msg_zlet_battery_config config;
-	struct msg_zlet_battery_events events;
-} self = {
-	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-	.config = MSG_ZLET_BATTERY_CONFIG_INIT_ZERO,
-	.events = MSG_ZLET_BATTERY_EVENTS_INIT_ZERO,
-};
-
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)
 {
@@ -114,7 +104,7 @@ static int get_events(const struct zephlet *zephlet)
 	struct msg_zlet_battery_events events;
 
 	K_SPINLOCK(&data->lock) {
-		events = self.events;
+		events = data->events;
 	}
 
 	return zbus_chan_pub(&chan_zlet_battery_report, &events, K_MSEC(250));
@@ -131,8 +121,9 @@ static struct zlet_battery_api api = {
 };
 
 static struct zlet_battery_data data = {
+	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
 	.config = MSG_ZLET_BATTERY_CONFIG_INIT_ZERO,
-	.status = {.is_running = false}
+	.events = MSG_ZLET_BATTERY_EVENTS_INIT_ZERO
 };
 
 int zlet_battery_init_fn(const struct zephlet *self)

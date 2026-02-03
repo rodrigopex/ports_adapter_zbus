@@ -304,6 +304,7 @@ def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str) -> 
     invoke_msg = None
     report_msg = None
     config_msg = None
+    events_msg = None
 
     # Get nested messages from elements
     nested_messages = []
@@ -318,6 +319,8 @@ def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str) -> 
             report_msg = nested
         elif nested.name == 'Config':
             config_msg = nested
+        elif nested.name == 'Events':
+            events_msg = nested
 
     if not invoke_msg:
         print("Error: No Invoke message found in zephlet")
@@ -452,6 +455,7 @@ def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str) -> 
         'config_fields': config_fields,
         'config_type': f"msg_{zephlet_name}_config" if config_msg else None,
         'has_config': config_msg is not None,
+        'has_events': events_msg is not None,
         'rpc_methods': rpc_methods
     }
 

@@ -9,16 +9,6 @@
 
 LOG_MODULE_DECLARE(zlet_position, CONFIG_ZEPHLET_POSITION_LOG_LEVEL);
 
-static struct {
-	struct msg_zephlet_status status;
-	struct msg_zlet_position_config config;
-	struct msg_zlet_position_events events;
-} self = {
-	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-	.config = MSG_ZLET_POSITION_CONFIG_INIT_ZERO,
-	.events = MSG_ZLET_POSITION_EVENTS_INIT_ZERO,
-};
-
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)
 {
@@ -101,7 +91,7 @@ static int get_events(const struct zephlet *zephlet)
 	struct msg_zlet_position_events events;
 
 	K_SPINLOCK(&data->lock) {
-		events = self.events;
+		events = data->events;
 	}
 
 	return zbus_chan_pub(&chan_zlet_position_report, &events, K_MSEC(250));
@@ -117,8 +107,9 @@ static struct zlet_position_api api = {
 };
 
 static struct zlet_position_data data = {
+	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
 	.config = MSG_ZLET_POSITION_CONFIG_INIT_ZERO,
-	.status = {.is_running = false}
+	.events = MSG_ZLET_POSITION_EVENTS_INIT_ZERO
 };
 
 int zlet_position_init_fn(const struct zephlet *self)

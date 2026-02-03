@@ -12,10 +12,13 @@ ZBUS_CHAN_DECLARE(chan_{{ zephlet_name }}_invoke, chan_{{ zephlet_name }}_report
 
 struct {{ zephlet_name }}_data {
 	struct k_spinlock lock;
+	struct msg_zephlet_status status;
 {%- if has_config %}
 	struct {{ config_type }} config;
 {%- endif %}
-	struct msg_zephlet_status status;
+{%- if has_events %}
+	struct msg_{{ zephlet_name }}_events events;
+{%- endif %}
 };
 
 struct {{ zephlet_name }}_api {

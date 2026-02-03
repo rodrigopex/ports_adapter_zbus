@@ -7,16 +7,6 @@
 
 LOG_MODULE_DECLARE(zlet_tick, CONFIG_ZEPHLET_TICK_LOG_LEVEL);
 
-static struct {
-	struct msg_zephlet_status status;
-	struct msg_zlet_tick_report config;
-	struct msg_zlet_tick_events events;
-} self = {
-	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-	.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
-	.events = MSG_ZLET_TICK_EVENTS_INIT_ZERO,
-};
-
 void zlet_tick_handler(struct k_timer *timer_id)
 {
 	LOG_DBG("tick!");
@@ -106,7 +96,7 @@ static int get_events(const struct zephlet *zephlet)
 	struct msg_zlet_tick_events events;
 
 	K_SPINLOCK(&data->lock) {
-		events = self.events;
+		events = data->events;
 	}
 
 	return zbus_chan_pub(&chan_zlet_tick_report, &events, K_MSEC(250));
@@ -122,7 +112,8 @@ static struct zlet_tick_api api = {
 };
 
 static struct zlet_tick_data data = {.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
-				     .status = {.is_running = false}};
+				     .status = MSG_ZEPHLET_STATUS_INIT_ZERO,
+				     .events = MSG_ZLET_TICK_EVENTS_INIT_ZERO};
 
 int zlet_tick_init_fn(const struct zephlet *self)
 {
