@@ -1,0 +1,17 @@
+manifest:
+  self:
+    west-commands: zephlets/shared/west/west-commands.yml
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: main
+      import:
+        # By using name-allowlist we clone only required modules
+        name-allowlist:
+          - cmsis_6  # ARM CMSIS (required by soc/arm/mps2/soc.h)
+          - nanopb   # Protobuf codegen (zephlet requirement)

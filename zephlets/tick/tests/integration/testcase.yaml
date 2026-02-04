@@ -4,5 +4,5 @@ tests:
     harness: ztest
     platform_allow:
       - native_sim
-      - qemu_cortex_m3
+      - mps2/an385
     timeout: 60

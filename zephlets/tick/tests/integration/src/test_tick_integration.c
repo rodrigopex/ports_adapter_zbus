@@ -98,6 +98,8 @@ ZTEST(tick_integration, test_timer_fires)
 	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_true(last_report.events.has_tick, "Should have tick event");
+	/* WARNING: Potential flaky test. Some runners can have different timing or delay */
+	zassert_within(last_report.events.timestamp, 100, 10, "Value not in [90, 110]");
 }
 
 /* Test 5: Stop stops timer */
