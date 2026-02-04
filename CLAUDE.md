@@ -8,15 +8,31 @@
 - Keep the tokens usage as small as possible without sacrificing clarity.
 - Tell me when I am doing something wrong that is using too many tokens.
 
-## Build Commands
+## Commands
 
-Uses `just` (mps2/an385 board):
+**West Extensions** (primary, works from any directory):
+- `west zephlet new [-n NAME] [-d DESC] [-a AUTHOR]` - Create zephlet (interactive if no args)
+- `west zephlet new-adapter [-o ORIGIN] [-d DEST] [-i]` - Create adapter (-i for interactive)
+- `west zephlet gen ZEPHLET` - Regenerate interface files (needs `build/modules/<zephlet>_zephlet`)
 
+**Build** (`just`, mps2/an385):
 - `just b` / `just c b` / `just b r` / `just c b r`
 - `just config` / `just ds` / `just da`
-- `just gen_zephlet_files <zephlet>` (requires `build/modules/<zephlet>_zephlet` exists - run `just b` once first)
-- `just new_adapter_interactive` / `just new_adapter <origin> <dest>`
-  Underlying: `west build -d ./build -b mps2/an385 .`
+
+**Legacy alternatives** (just recipes, use west commands instead):
+- `just new_zephlet_interactive` / `just new_zephlet NAME` → `west zephlet new`
+- `just new_adapter_interactive` / `just new_adapter ORIGIN DEST` → `west zephlet new-adapter`
+- `just gen_zephlet_files ZEPHLET` → `west zephlet gen ZEPHLET`
+
+### West Commands Details
+
+**Implementation:** `zephlets/shared/west/zephlet_commands.py` (registered via `west-commands.yml`)
+**Benefits:** Ecosystem integration, auto path detection, dependency validation, works from any dir, structured output with next steps
+**Dependencies:** Checks for copier, proto-schema-parser, jinja2 before execution
+**Path detection:** Auto-resolves workspace paths from manifest location (`_get_workspace_paths()`)
+**Error handling:** Validates zephlet existence, build dirs, provides actionable error messages
+
+**vs Justfile:** Identical output files, better UX/integration. Use west for zephlet management, just for builds.
 
 ## Architecture
 
@@ -78,9 +94,12 @@ Copier template auto-includes pattern. Self-managed visibility, no manual root u
 
 ## Creating Zephlets
 
-**Workflow:** `just new_zephlet_interactive` → Copier creates .proto/.c/CMakeLists/Kconfig/module.yml → Edit .proto (Config/Events/RPCs) → `just b` once (bootstrap .c if needed) → Edit .c (TODOs) → Add to root CMakeLists EXTRA*ZEPHYR_MODULES → Enable CONFIG*<ZEPHLET>\_ZEPHLET=y → `just c b r`
+**Workflow:** `west zephlet new` → Copier creates .proto/.c/CMakeLists/Kconfig/module.yml → Edit .proto (Config/Events/RPCs) → `just b` once (bootstrap .c if needed) → Edit .c (TODOs) → Add to root CMakeLists EXTRA*ZEPHYR_MODULES → Enable CONFIG*<ZEPHLET>\_ZEPHLET=y → `just c b r`
 
-**Build-time codegen:** .proto changes → auto-regen \_interface.h/\_interface.c/<zephlet>.h/.pb.h/.pb.c. Manual: `just gen_zephlet_files <zephlet>` (requires `build/modules/<zephlet>_zephlet` exists first).
+**Non-interactive:** `west zephlet new -n NAME -d "Description" -a "Author"`
+**Interactive:** `west zephlet new` (prompts for all fields)
+
+**Build-time codegen:** .proto changes → auto-regen \_interface.h/\_interface.c/<zephlet>.h/.pb.h/.pb.c. Manual: `west zephlet gen <zephlet>` (requires `build/modules/<zephlet>_zephlet` exists first).
 **Bootstrap behavior:** First build auto-generates .c via `--impl-only` if missing. After that, only manually edit .c.
 
 **Files:** VCS: .proto, .c (after bootstrap), CMakeLists, Kconfig, module.yml. Build: \_interface.h, \_interface.c, <zephlet>.h, .pb.h, .pb.c
@@ -89,11 +108,12 @@ Copier template auto-includes pattern. Self-managed visibility, no manual root u
 
 **Workflow:**
 
-1. `just new_adapter_interactive` → select origin/dest → select report fields
+1. `west zephlet new-adapter` → select origin/dest → select report fields
 2. Implement TODO comments in generated `<Origin>+<Dest>_zlet_adapter.c`
 3. `just c b r` → Enabled by default (CONFIG*<ORIGIN>\_TO*<DEST>\_ADAPTER=y)
 
-**Non-interactive:** `just new_adapter <origin> <dest>` (generates all report fields)
+**Non-interactive:** `west zephlet new-adapter -o ORIGIN -d DEST` (generates all report fields)
+**Interactive:** `west zephlet new-adapter -i` (prompts for zephlets and report fields)
 
 Auto-generates: adapter.c (with interface includes only, no .pb.h), Kconfig entry, CMakeLists.txt entry. Parses protos for Report fields (origin) + Invoke fields (dest, adds API suggestions to TODOs). Duplicate detection, manual fallback on auto-update failure.
 

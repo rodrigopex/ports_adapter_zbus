@@ -1,5 +1,5 @@
 west-commands:
-  - file: west/zephlet_commands.py
+  - file: zephlets/shared/west/zephlet_commands.py
     commands:
       - name: zephlet
         class: Zephlet
