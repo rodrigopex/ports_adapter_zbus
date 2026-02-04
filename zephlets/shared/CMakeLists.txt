@@ -23,10 +23,8 @@ if(CONFIG_ZEPHLETS)
         PROPERTY
         PROTO_FILES_LIST
         "${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet.proto"
-        "${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet_options.proto"
     )
     message(WARNING "Shared Zephlet Proto File Added: ${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet.proto")
-    message(WARNING "Shared Zephlet Proto File Added: ${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet_options.proto")
 
     zephyr_library()
     zephyr_library_sources("${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet.c")

@@ -2,7 +2,6 @@ syntax = "proto3";
 
 import "nanopb.proto";
 import "zephlet.proto";
-import "zephlet_options.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
