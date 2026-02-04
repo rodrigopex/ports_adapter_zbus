@@ -19,11 +19,6 @@
 - `just b` / `just c b` / `just b r` / `just c b r`
 - `just config` / `just ds` / `just da`
 
-**Legacy alternatives** (just recipes, use west commands instead):
-- `just new_zephlet_interactive` / `just new_zephlet NAME` → `west zephlet new`
-- `just new_adapter_interactive` / `just new_adapter ORIGIN DEST` → `west zephlet new-adapter`
-- `just gen_zephlet_files ZEPHLET` → `west zephlet gen ZEPHLET`
-
 ### West Commands Details
 
 **Implementation:** `zephlets/shared/west/zephlet_commands.py` (registered via `west-commands.yml`)

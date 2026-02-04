@@ -56,51 +56,6 @@ attach:
 kb arg:
     @fend @no_trailing_newline "{{ arg }} << 10" | wl-copy
 
-gen_zephlet_files zephlet_name:
-    @echo "Regenerating zephlet files to build directory..."
-    @test -d build/modules/{{ zephlet_name }}_zephlet || (echo "Error: build/modules/{{ zephlet_name }}_zephlet not found. Run 'just b' first." && exit 1)
-    python3 zephlets/shared/codegen/generate_zephlet.py \
-    --proto zephlets/{{ zephlet_name }}/{{ zephlet_name }}_zephlet.proto \
-    --output-dir build/modules/{{ zephlet_name }}_zephlet \
-    --zephlet-name {{ zephlet_name }}_zephlet \
-    --module-dir {{ zephlet_name }} \
-    --no-generate-impl
-
-# Create new zephlet (interactive)
-new_zephlet_interactive:
-    copier copy --UNSAFE \
-    zephlets/shared/codegen/zephyr_zephlet_template \
-    zephlets/
-
-# Create new zephlet with name
-new_zephlet zephlet_name:
-    copier copy --UNSAFE --force \
-    --data zephlet_name="{{ zephlet_name }}" \
-    --data include_basic_commands=true \
-    --data zephlet_description="{{ zephlet_name }} Zephlet Module" \
-    --data author_name="" \
-    zephlets/shared/codegen/zephyr_zephlet_template \
-    zephlets/
-
-# Update zephlet from template
-update_zephlet zephlet_name:
-    @cd zephlets/{{ zephlet_name }} && copier update --UNSAFE
-
-# Create new adapter (interactive)
-new_adapter_interactive:
-    python3 zephlets/shared/codegen/generate_adapter.py \
-    --zephlets-path zephlets \
-    --output-dir adapters \
-    --interactive
-
-# Create new adapter with origin and destination
-new_adapter origin dest:
-    python3 zephlets/shared/codegen/generate_adapter.py \
-    --zephlets-path zephlets \
-    --output-dir adapters \
-    --origin {{ origin }} \
-    --destination {{ dest }}
-
 # Test commands
 
 test_build_dir := './build_test'
