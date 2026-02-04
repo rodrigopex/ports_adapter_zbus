@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "nanopb.proto";
 import "zephlet.proto";
+import "zephlet_options.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
 
@@ -23,6 +24,7 @@ message MsgZletTick {
       Config config = 4;
       Empty get_config = 5;
       Empty get_events = 6;
+      // Custom commands start at 7+
     }
   }
 
@@ -31,6 +33,7 @@ message MsgZletTick {
       MsgZephletStatus status = 1;
       Config config = 2;
       Events events = 3;
+      // Custom reports start at 4+
     }
   }
 }
@@ -41,6 +44,6 @@ service Tick {
   rpc get_status(Empty) returns (MsgZephletStatus);
   rpc config(MsgZletTick.Config) returns (MsgZletTick.Config);
   rpc get_config(Empty) returns (MsgZletTick.Config);
-  /* This will report the tick events */
   rpc get_events(Empty) returns (stream MsgZletTick.Events);
+  // Custom RPCs below
 }

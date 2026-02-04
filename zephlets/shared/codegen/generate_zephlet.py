@@ -252,12 +252,114 @@ def validate_zephlet_consistency(rpc_methods: list, report_fields: list, invoke_
         raise ValueError(error_msg)
 
 
-def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str) -> dict:
+def preprocess_proto_with_lifecycle(proto_path: str, zephlet_name: str) -> tuple:
+    """
+    Preprocess proto file to expand lifecycle options.
+    Returns (expanded_proto_content, original_proto_content).
+
+    If lifecycle options are detected, injects standard fields:
+    - lifecycle_invoke: injects fields 1-6 (start, stop, get_status, config, get_config, get_events)
+    - lifecycle_report: injects fields 1-3 (status, config, events)
+    - lifecycle_service: injects 6 standard RPCs
+    """
+    with open(proto_path, 'r') as f:
+        original_content = f.read()
+
+    # Quick check: if no lifecycle options mentioned, return original
+    if 'lifecycle_invoke' not in original_content and \
+       'lifecycle_report' not in original_content and \
+       'lifecycle_service' not in original_content:
+        return original_content, original_content
+
+    # Parse to detect options
+    parser = Parser()
+    try:
+        proto_file = parser.parse(original_content)
+    except Exception as e:
+        print(f"Warning: Failed to parse proto for preprocessing: {e}")
+        return original_content, original_content
+
+    expanded = original_content
+
+    # Find zephlet message name (MsgZlet<Name>)
+    zephlet_msg_name = None
+    for element in proto_file.file_elements:
+        if hasattr(element, 'name') and element.__class__.__name__ == 'Message':
+            if element.name.startswith('MsgZlet'):
+                zephlet_msg_name = element.name
+                break
+
+    if not zephlet_msg_name:
+        print("Warning: Could not find MsgZlet* message for lifecycle expansion")
+        return original_content, original_content
+
+    # Extract base name for Config/Events references
+    # MsgZletTick -> Tick
+    base_camel = zephlet_msg_name.replace('MsgZlet', '')
+
+    # Inject lifecycle invoke fields
+    # Pattern matches: message Invoke { ... option = true; ... oneof <name> { <content> } }
+    # Captures everything up to oneof { and the content between { }
+    invoke_pattern = r'(message\s+Invoke\s*\{[^}]*option\s*\(\s*zephlet\.lifecycle_invoke\s*\)\s*=\s*true\s*;[^}]*oneof\s+\w+\s*\{)([^}]*?)(\})'
+    invoke_fields = f"""
+      Empty start = 1;
+      Empty stop = 2;
+      Empty get_status = 3;
+      Config config = 4;
+      Empty get_config = 5;
+      Empty get_events = 6;
+      // Custom commands start at 7+
+    """
+    # Replace oneof content (group 2) with injected fields
+    expanded = re.sub(invoke_pattern, r'\1' + invoke_fields + r'\3', expanded, flags=re.DOTALL)
+
+    # Inject lifecycle report fields
+    # Pattern matches: message Report { ... option = true; ... oneof <name> { <content> } }
+    report_pattern = r'(message\s+Report\s*\{[^}]*option\s*\(\s*zephlet\.lifecycle_report\s*\)\s*=\s*true\s*;[^}]*oneof\s+\w+\s*\{)([^}]*?)(\})'
+    report_fields = f"""
+      MsgZephletStatus status = 1;
+      Config config = 2;
+      Events events = 3;
+      // Custom reports start at 4+
+    """
+    # Replace oneof content (group 2) with injected fields
+    expanded = re.sub(report_pattern, r'\1' + report_fields + r'\3', expanded, flags=re.DOTALL)
+
+    # Inject lifecycle service RPCs
+    # Pattern matches: service <name> { ... option = true; <content> }
+    service_pattern = r'(service\s+\w+\s*\{[^}]*option\s*\(\s*zephlet\.lifecycle_service\s*\)\s*=\s*true\s*;)([^}]*)(\})'
+    service_rpcs = f"""
+  rpc start(Empty) returns (MsgZephletStatus);
+  rpc stop(Empty) returns (MsgZephletStatus);
+  rpc get_status(Empty) returns (MsgZephletStatus);
+  rpc config({zephlet_msg_name}.Config) returns ({zephlet_msg_name}.Config);
+  rpc get_config(Empty) returns ({zephlet_msg_name}.Config);
+  rpc get_events(Empty) returns (stream {zephlet_msg_name}.Events);
+  // Custom RPCs below
+"""
+    # Append service RPCs before existing content and closing brace
+    expanded = re.sub(service_pattern, r'\1' + service_rpcs + r'\2\3', expanded, flags=re.DOTALL)
+
+    return expanded, original_content
+
+
+def parse_zephlet_proto(proto_path: str, zephlet_name: str, module_dir: str, output_dir: str = None) -> dict:
     """Parse zephlet protobuf file and extract structure information"""
     parser = Parser()
 
-    with open(proto_path, 'r') as f:
-        proto_content = f.read()
+    # Preprocess proto to expand lifecycle options
+    expanded_proto_content, original_proto_content = preprocess_proto_with_lifecycle(proto_path, zephlet_name)
+    proto_content = expanded_proto_content
+
+    # Write expanded proto to build dir for debugging
+    if output_dir and expanded_proto_content != original_proto_content:
+        expanded_proto_path = os.path.join(output_dir, os.path.basename(proto_path).replace('.proto', '.proto.expanded'))
+        try:
+            with open(expanded_proto_path, 'w') as f:
+                f.write(expanded_proto_content)
+            print(f"Expanded proto: {expanded_proto_path}")
+        except Exception as e:
+            print(f"Warning: Could not write expanded proto: {e}")
 
     try:
         proto_file = parser.parse(proto_content)
@@ -532,7 +634,7 @@ def main():
 
     # Parse proto file
     print(f"Parsing {args.proto}...")
-    context = parse_zephlet_proto(args.proto, args.zephlet_name, args.module_dir)
+    context = parse_zephlet_proto(args.proto, args.zephlet_name, args.module_dir, args.output_dir)
 
     print(f"Zephlet: {context['zephlet_name']}")
     print(f"Invoke fields: {[f['name'] for f in context['invoke_fields']]}")

@@ -66,6 +66,10 @@ Uses `ZBUS_ASYNC_LISTENER_DEFINE()` + `ZBUS_CHAN_ADD_OBS(priority=3)`. Kconfig t
 
 `MsgZlet<Zephlet> { Config{}, Events{}, Invoke{oneof}, Report{oneof} }`. Invoke: start/stop/get_status/config/get_config+custom. Report: status/config+events. Import "zephlet.proto" for Empty/MsgZephletStatus. Use `option (nanopb_fileopt).anonymous_oneof = true`. Query: get_status/get_config → reports. PROTO_FILES_LIST → nanopb. RPC return types strictly validated against Invoke/Report fields.
 
+**Lifecycle Pattern:** Standard fields MUST be explicitly listed in source protos (empty oneofs invalid protobuf syntax). Reserved numbers: Invoke 1-6 (start, stop, get_status, config, get_config, get_events), Report 1-3 (status, config, events). Custom commands/reports start at 7+/4+.
+
+**Lifecycle Options (infrastructure):** `zephlet_options.proto` defines custom options (lifecycle_invoke, lifecycle_report, lifecycle_service). Generator preprocessing expands these for validation/debugging, writing expanded proto to `build/modules/<zephlet>/<zephlet>.proto.expanded`. Source protos still need explicit fields for protoc compilation.
+
 ## Build System
 
 **CMake function:** `zephyr_zephlet_generate(<proto_path>)` - auto-generates interface files, handles bootstrap with `--impl-only` flag.
