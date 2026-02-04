@@ -10,7 +10,7 @@ set_property(GLOBAL PROPERTY PROTO_FILES_LIST)
 
 set(EXTRA_ZEPHYR_MODULES
     "${CMAKE_SOURCE_DIR}/adapters"
-    "${SERVICES_PATH}/shared"
+    # shared_zephlet now loaded via west.yml
     "${SERVICES_PATH}/ui"
     "${SERVICES_PATH}/tick"
     "${SERVICES_PATH}/battery"

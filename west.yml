@@ -1,17 +1,22 @@
 manifest:
-  self:
-    west-commands: zephlets/shared/west/west-commands.yml
-
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
+    - name: local
+      url-base: file:///Users/rodrigopeixoto/Cloud/Projects/citrinio/zephlets_workspace
 
   projects:
+    - name: zephlet
+      url: file:///Users/rodrigopeixoto/Cloud/Projects/citrinio/zephlets_workspace/modules/lib/zephlet
+      path: modules/lib/zephlet
+      revision: HEAD
+      west-commands: west/west-commands.yml
     - name: zephyr
       remote: zephyrproject-rtos
       revision: main
+      clone-depth: 1
       import:
         # By using name-allowlist we clone only required modules
         name-allowlist:
-          - cmsis_6  # ARM CMSIS (required by soc/arm/mps2/soc.h)
-          - nanopb   # Protobuf codegen (zephlet requirement)
+          - cmsis_6 # ARM CMSIS (required by soc/arm/mps2/soc.h)
+          - nanopb # Protobuf codegen (zephlet requirement)

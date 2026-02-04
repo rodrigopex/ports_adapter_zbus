@@ -1,6 +1,0 @@
-west-commands:
-  - file: zephlets/shared/west/zephlet_commands.py
-    commands:
-      - name: zephlet
-        class: Zephlet
-        help: zephlet development tools
