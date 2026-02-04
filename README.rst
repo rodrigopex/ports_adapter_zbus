@@ -136,13 +136,18 @@ Zephlet state protected by K_SPINLOCK. All state modifications acquire spinlock.
 Configuration
 *************
 
-Via Kconfig in ``prj.conf``:
+Enable zephlets in ``prj.conf``:
 
 .. code-block:: kconfig
 
    CONFIG_ZEPHLET_<ZEPHLET>=y
    CONFIG_ZEPHLET_<ZEPHLET>_LOG_LEVEL_DBG=y
-   CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=y
+
+**Adapters:** Enabled by default when generated. Both origin and destination zephlets must be enabled for the adapter to function. To disable a specific adapter:
+
+.. code-block:: kconfig
+
+   CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=n
 
 References
 **********
