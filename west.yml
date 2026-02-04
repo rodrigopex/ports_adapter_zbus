@@ -2,12 +2,10 @@ manifest:
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
-    - name: local
-      url-base: file:///Users/rodrigopeixoto/Cloud/Projects/citrinio/zephlets_workspace
 
   projects:
     - name: zephlet
-      url: file:///Users/rodrigopeixoto/Cloud/Projects/citrinio/zephlets_workspace/modules/lib/zephlet
+      url: git@github.com:rodrigopex/zephlet.git
       path: modules/lib/zephlet
       revision: HEAD
       west-commands: west/west-commands.yml
