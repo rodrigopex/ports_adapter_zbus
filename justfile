@@ -104,32 +104,33 @@ new_adapter origin dest:
 # Test commands
 
 test_build_dir := './build_test'
+twister_out_dir := '/tmp/twister-out'
 
 # Run all tests (unit + integration)
 test:
     @echo "{{ pre }} test: running all tests"
-    west twister --testsuite-root zephlets --inline-logs -p qemu_x86_64
-    west twister --testsuite-root tests --inline-logs -p qemu_x86_64
+    west twister --testsuite-root zephlets --inline-logs -p qemu_x86_64 -O {{ twister_out_dir }}
+    west twister --testsuite-root tests --inline-logs -p qemu_x86_64 -O {{ twister_out_dir }}
 
 # Run only unit tests (from all zephlets)
 test_unit:
     @echo "{{ pre }} test_unit: running unit tests"
-    west twister --testsuite-root zephlets --inline-logs
+    west twister --testsuite-root zephlets --inline-logs -O {{ twister_out_dir }}
 
 # Run only integration tests
 test_integration:
     @echo "{{ pre }} test_integration: running integration tests"
-    west twister --testsuite-root tests/integration --inline-logs
+    west twister --testsuite-root tests/integration --inline-logs -O {{ twister_out_dir }}
 
 # Run specific zephlet's tests
 test_zephlet zephlet_name:
     @echo "{{ pre }} test_zephlet: {{ zephlet_name }}"
-    west twister --testsuite-root zephlets/{{ zephlet_name }}/tests --inline-logs -v
+    west twister --testsuite-root zephlets/{{ zephlet_name }}/tests --inline-logs -v -O {{ twister_out_dir }}
 
 # Run specific test by path
 test_one test_path:
     @echo "{{ pre }} test_one: {{ test_path }}"
-    west twister --testsuite-root {{ test_path }} --inline-logs -v
+    west twister --testsuite-root {{ test_path }} --inline-logs -v -O {{ twister_out_dir }}
 
 # Build and run single test manually (Linux only - macOS users should use test_zephlet)
 test_build test_path:
@@ -140,10 +141,10 @@ test_build test_path:
 # Clean test artifacts
 test_clean:
     @echo "{{ pre }} test_clean"
-    command rm -rf {{ test_build_dir }} twister-out
+    command rm -rf {{ test_build_dir }} {{ twister_out_dir }}
 
 # Coverage report (requires gcovr)
 test_coverage:
     @echo "{{ pre }} test_coverage"
-    west twister --testsuite-root zephlets --coverage --coverage-tool gcovr
-    west twister --testsuite-root tests --coverage --coverage-tool gcovr
+    west twister --testsuite-root zephlets --coverage --coverage-tool gcovr -O {{ twister_out_dir }}
+    west twister --testsuite-root tests --coverage --coverage-tool gcovr -O {{ twister_out_dir }}
