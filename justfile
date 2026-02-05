@@ -64,8 +64,8 @@ twister_out_dir := '/tmp/twister-out'
 # Run all tests (unit + integration)
 test:
     @echo "{{ pre }} test: running all tests"
-    west twister --testsuite-root src/zephlets --inline-logs -p qemu_x86_64 -O {{ twister_out_dir }}
-    west twister --testsuite-root tests --inline-logs -p qemu_x86_64 -O {{ twister_out_dir }}
+    west twister --testsuite-root src/zephlets -vvv --inline-logs -p mps2/an385 -O {{ twister_out_dir }}
+    west twister --testsuite-root tests -vvv --inline-logs -p mps2/an385 -O {{ twister_out_dir }}
 
 # Run only unit tests (from all zephlets)
 test_unit:
