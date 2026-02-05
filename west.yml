@@ -7,7 +7,7 @@ manifest:
     - name: zephlet
       url: git@github.com:rodrigopex/zephlet.git
       path: modules/lib/zephlet
-      revision: HEAD
+      revision: main
       west-commands: west/west-commands.yml
     - name: zephyr
       remote: zephyrproject-rtos
