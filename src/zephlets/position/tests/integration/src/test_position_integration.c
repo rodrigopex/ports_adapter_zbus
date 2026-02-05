@@ -86,48 +86,34 @@ ZTEST(position_integration, test_get_status)
 	zassert_true(last_report.status.is_running, "Should be running");
 }
 
-/** Test 4: Config set publishes config */
-/** TODO: Uncomment and customize if Config has fields (see battery/tick for examples) */
-/*
+/* Test 4: Config set publishes config */
 ZTEST(position_integration, test_config_set)
 {
-	struct msg_zlet_position_config cfg = {
-		// Fill in config field values here
-	};
-
-	zlet_position_config(&cfg, K_MSEC(100));
+	zlet_position_config_set(1000, K_MSEC(100));
 
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report received");
 	zassert_equal(last_report.which_position_report, MSG_ZLET_POSITION_REPORT_CONFIG_TAG,
 		      "Expected config report");
-	// Add assertions for specific config fields
+	zassert_equal(last_report.config.update_interval_ms, 1000, "Interval should be 1000ms");
 }
-*/
 
-/** Test 5: Get config returns current config */
-/** TODO: Uncomment and customize if Config has fields (see battery/tick for examples) */
-/*
+/* Test 5: Get config returns current config */
 ZTEST(position_integration, test_config_get)
 {
-	struct msg_zlet_position_config cfg = {
-		// Fill in config field values here
-	};
-
-	// First set config
-	zlet_position_config(&cfg, K_MSEC(100));
+	/* First set config */
+	zlet_position_config_set(2000, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report");
 
-	// Reset counter
+	/* Reset counter */
 	report_count = 0;
 
-	// Get config
+	/* Get config */
 	zlet_position_get_config(K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report from get");
 	zassert_equal(last_report.which_position_report, MSG_ZLET_POSITION_REPORT_CONFIG_TAG,
 		      "Expected config report");
-	// Add assertions for specific config fields
+	zassert_equal(last_report.config.update_interval_ms, 2000, "Interval should be 2000ms");
 }
-*/
 
 /* Test 6: Start-Stop-Start cycle works */
 ZTEST(position_integration, test_lifecycle_cycle)
@@ -148,5 +134,60 @@ ZTEST(position_integration, test_lifecycle_cycle)
 	zassert_true(last_report.status.is_running, "Should be running again");
 }
 
-/** Test 7: Custom RPC tests */
-/** TODO: Add tests for zephlet-specific RPC functions (see battery for get_battery_state example) */
+/* Test 7: Get position */
+ZTEST(position_integration, test_get_position)
+{
+	/* Start */
+	zlet_position_start(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
+
+	/* Get position */
+	zlet_position_get_position(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No position report");
+	zassert_equal(last_report.which_position_report, MSG_ZLET_POSITION_REPORT_POSITION_DATA_TAG,
+		      "Expected position_data report");
+	zassert_true(last_report.position_data.fix_valid, "Fix should be valid");
+	zassert_true(last_report.position_data.satellites > 0, "Should have satellites");
+
+	/* Stop */
+	zlet_position_stop(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
+}
+
+/* Test 8: Position changed events */
+ZTEST(position_integration, test_position_changed_events)
+{
+	/* Start */
+	zlet_position_start(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
+
+	/* Wait for periodic position_changed event (5s default) */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(7)), "No position_changed event");
+	zassert_equal(last_report.which_position_report, MSG_ZLET_POSITION_REPORT_EVENTS_TAG,
+		      "Expected events report");
+	zassert_true(last_report.events.has_position_changed, "Should have position_changed");
+
+	/* Stop */
+	zlet_position_stop(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
+}
+
+/* Test 9: Config update interval */
+ZTEST(position_integration, test_config_update_interval)
+{
+	/* Set config */
+	zlet_position_config_set(1000, K_MSEC(100)); /* 1s updates */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report");
+
+	/* Start */
+	zlet_position_start(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
+
+	/* Should get position_changed within 2s instead of 5s */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(3)), "No quick position_changed event");
+	zassert_true(last_report.events.has_position_changed, "Should have position_changed");
+
+	/* Stop */
+	zlet_position_stop(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
+}

@@ -7,11 +7,23 @@ option (nanopb_fileopt).anonymous_oneof = true;
 
 message MsgZletPosition {
     message Config {
-        // TODO: Add configuration fields specific to Position
+        int32 update_interval_ms = 1; /* GPS update frequency (default 5000ms) */
+    }
+
+    message PositionData {
+        int32 latitude_micro = 1;   /* Latitude in microdegrees (degrees * 1e6) */
+        int32 longitude_micro = 2;  /* Longitude in microdegrees */
+        int32 altitude_cm = 3;      /* Altitude in centimeters */
+        int32 speed_cmps = 4;       /* Speed in cm/s */
+        int32 heading_decideg = 5;  /* Heading in decidegrees (0-3600) */
+        int32 satellites = 6;       /* Number of satellites */
+        bool fix_valid = 7;
     }
 
     message Events {
-        // TODO: Add event fields specific to Position
+        int32 timestamp = 1;
+        optional bool position_changed = 2;
+        optional bool fix_lost = 3;
     }
 
     message Invoke {
@@ -23,6 +35,7 @@ message MsgZletPosition {
             Config config = 4;
             Empty get_config = 5;
             Empty get_events = 6;
+            Empty get_position = 7;
 
         }
     }
@@ -32,6 +45,7 @@ message MsgZletPosition {
             MsgZephletStatus status = 1;
             Config config = 2;
             Events events = 3;
+            PositionData position_data = 4;
         }
     }
 }
@@ -43,6 +57,7 @@ service Position {
     rpc get_status (Empty) returns (MsgZephletStatus);
     rpc config (MsgZletPosition.Config) returns (MsgZletPosition.Config);
     rpc get_config (Empty) returns (MsgZletPosition.Config);
+    rpc get_position (Empty) returns (MsgZletPosition.PositionData);
     /* This will report the position events */
     rpc get_events (Empty) returns (stream MsgZletPosition.Events);
 
