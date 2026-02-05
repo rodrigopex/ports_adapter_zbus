@@ -176,8 +176,8 @@ ZTEST(battery_integration, test_low_battery_event)
 	zassert_equal(last_report.which_battery_report, MSG_ZLET_BATTERY_REPORT_EVENTS_TAG,
 		      "Expected events report");
 
-	zassert_true(last_report.events.has_low_batter, "Should have low_battery event");
-	zassert_true(last_report.events.low_batter, "Low battery flag should be true");
+	zassert_true(last_report.events.has_low_battery, "Should have low_battery event");
+	zassert_true(last_report.events.low_battery, "Low battery flag should be true");
 
 	/* Stop */
 	zlet_battery_stop(K_MSEC(100));

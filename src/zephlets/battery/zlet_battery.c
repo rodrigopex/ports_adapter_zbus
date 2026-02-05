@@ -43,14 +43,14 @@ static void zlet_battery_timer_handler(struct k_timer *timer_id)
 
 	/* Check low battery threshold */
 	if (current_voltage < low_battery_threshold) {
-		events.has_low_batter = true;
-		events.low_batter = true;
+		events.has_low_battery = true;
+		events.low_battery = true;
 		events.timestamp = k_uptime_get_32();
 	}
 
 	k_spin_unlock(&battery_state_lock, key);
 
-	if (events.has_low_batter) {
+	if (events.has_low_battery) {
 		zlet_battery_report_events(&events, K_NO_WAIT);
 	}
 }

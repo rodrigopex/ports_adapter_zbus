@@ -19,7 +19,7 @@ message MsgZletBattery {
 
     message Events {
       int32 timestamp = 1;
-      optional bool low_batter = 2;
+      optional bool low_battery = 2;
     }
 
     message Invoke {
