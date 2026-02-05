@@ -137,4 +137,49 @@ ZTEST(battery_integration, test_lifecycle_cycle)
 }
 
 /** Test 7: Custom RPC tests */
-/** TODO: Add tests for zephlet-specific RPC functions (see battery for get_battery_state example) */
+ZTEST(battery_integration, test_get_battery_state)
+{
+	/* Start zephlet */
+	zlet_battery_start(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
+
+	/* Get battery state */
+	zlet_battery_get_battery_state(K_MSEC(100));
+
+	/* Wait for battery_state report */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No battery_state report");
+	zassert_equal(last_report.which_battery_report, MSG_ZLET_BATTERY_REPORT_BATTERY_STATE_TAG,
+		      "Expected battery_state report");
+
+	/* Verify state */
+	zassert_equal(last_report.battery_state.voltage, 3300, "Initial voltage should be 3300mV");
+	zassert_equal(last_report.battery_state.temperature, 25, "Temperature should be 25C");
+	zassert_false(last_report.battery_state.is_charging, "Should not be charging");
+
+	/* Stop */
+	zlet_battery_stop(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
+}
+
+ZTEST(battery_integration, test_low_battery_event)
+{
+	/* Start with low threshold */
+	zlet_battery_start(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
+
+	zlet_battery_config_set(3300, 3100, K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report");
+
+	/* Wait for low battery event (voltage decays 10mV/sec, starts at 3300, triggers at <3100) */
+	/* Should trigger after 20+ ticks */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(25)), "No low battery event");
+	zassert_equal(last_report.which_battery_report, MSG_ZLET_BATTERY_REPORT_EVENTS_TAG,
+		      "Expected events report");
+
+	zassert_true(last_report.events.has_low_batter, "Should have low_battery event");
+	zassert_true(last_report.events.low_batter, "Low battery flag should be true");
+
+	/* Stop */
+	zlet_battery_stop(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
+}

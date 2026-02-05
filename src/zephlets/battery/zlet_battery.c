@@ -9,6 +9,52 @@
 
 LOG_MODULE_DECLARE(zlet_battery, CONFIG_ZEPHLET_BATTERY_LOG_LEVEL);
 
+/* Battery monitoring timer */
+static void zlet_battery_timer_handler(struct k_timer *timer_id);
+
+K_TIMER_DEFINE(timer_zlet_battery, zlet_battery_timer_handler, NULL);
+
+/* Battery state tracking */
+static uint32_t monitor_count = 0;
+static struct k_spinlock battery_state_lock;
+static struct msg_zlet_battery_battery_state battery_state = {
+	.voltage = 3300,
+	.temperature = 25,
+	.is_charging = false
+};
+static int32_t voltage_operation = 3300;
+static int32_t low_battery_threshold = 3000;
+
+static void zlet_battery_timer_handler(struct k_timer *timer_id)
+{
+	struct msg_zlet_battery_events events = {0};
+	int32_t current_voltage;
+
+	k_spinlock_key_t key = k_spin_lock(&battery_state_lock);
+
+	/* Simulate voltage decay: start at voltage_operation, decay by 10mV per tick */
+	monitor_count++;
+	current_voltage = voltage_operation - (monitor_count * 10);
+
+	/* Update battery state */
+	battery_state.voltage = current_voltage;
+	battery_state.temperature = 25; /* const temp */
+	battery_state.is_charging = false;
+
+	/* Check low battery threshold */
+	if (current_voltage < low_battery_threshold) {
+		events.has_low_batter = true;
+		events.low_batter = true;
+		events.timestamp = k_uptime_get_32();
+	}
+
+	k_spin_unlock(&battery_state_lock, key);
+
+	if (events.has_low_batter) {
+		zlet_battery_report_events(&events, K_NO_WAIT);
+	}
+}
+
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)
 {
@@ -20,7 +66,8 @@ static int start(const struct zephlet *zephlet)
 		status = data->status;
 	}
 
-	/* TODO: Start zephlet resources (timers, threads, etc.) */
+	/* Start battery monitoring timer - 1 second interval */
+	k_timer_start(&timer_zlet_battery, K_MSEC(1000), K_MSEC(1000));
 
 	return zlet_battery_report_status(&status, K_MSEC(250));
 }
@@ -31,18 +78,16 @@ static int stop(const struct zephlet *zephlet)
 	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
+		if (!data->status.is_running) {
+			LOG_DBG("Zephlet has not started yet!");
+		}
+
+		/* Stop battery monitoring */
+		data->status.is_running = false;
 		status = data->status;
 	}
 
-	if (!status.is_running) {
-		LOG_DBG("Zephlet has not started yet!");
-	}
-
-	/* TODO: Stop zephlet resources (timers, threads, etc.) */
-
-	K_SPINLOCK(&data->lock) {
-		data->status.is_running = false;
-	}
+	k_timer_stop(&timer_zlet_battery);
 
 	return zlet_battery_report_status(&status, K_MSEC(250));
 }
@@ -67,7 +112,11 @@ static int config(const struct zephlet *zephlet, const struct msg_zlet_battery_c
 		data->config = *config;
 	}
 
-	/* TODO: Apply configuration changes to zephlet resources */
+	/* Apply configuration changes to battery monitoring */
+	k_spinlock_key_t key = k_spin_lock(&battery_state_lock);
+	voltage_operation = config->voltage_operation;
+	low_battery_threshold = config->low_battery_threshold;
+	k_spin_unlock(&battery_state_lock, key);
 
 	return zlet_battery_report_config(config, K_MSEC(250));
 }
@@ -87,14 +136,13 @@ static int get_config(const struct zephlet *zephlet)
 /* RPC returns MsgBatteryZephlet.BatteryState - publish to report field: battery_state */
 static int get_battery_state(const struct zephlet *zephlet)
 {
-	struct zlet_battery_data *data = zephlet->data;
+	struct msg_zlet_battery_battery_state state;
 
-	K_SPINLOCK(&data->lock) {
-		/* TODO: Implement get_battery_state logic */
-	}
-	/* TODO: Prepare report data and publish */
-	/* return zlet_battery_report_battery_state(report_data, K_MSEC(250)); */
-	return 0;
+	k_spinlock_key_t key = k_spin_lock(&battery_state_lock);
+	state = battery_state;
+	k_spin_unlock(&battery_state_lock, key);
+
+	return zlet_battery_report_battery_state(&state, K_MSEC(250));
 }
 
 /* RPC returns MsgZletBattery.Events - publish to report field: events */
@@ -122,7 +170,7 @@ static struct zlet_battery_api api = {
 
 static struct zlet_battery_data data = {
 	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-	.config = MSG_ZLET_BATTERY_CONFIG_INIT_ZERO,
+	.config = {.voltage_operation = 3300, .low_battery_threshold = 3000},
 	.events = MSG_ZLET_BATTERY_EVENTS_INIT_ZERO
 };
 
