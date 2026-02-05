@@ -32,6 +32,10 @@ ZBUS_CHAN_ADD_OBS(chan_zlet_storage_report, test_lis, 2);
 static void reset(void *fixture)
 {
 	ARG_UNUSED(fixture);
+	/* Clear storage between tests */
+	zlet_storage_clear(K_MSEC(100));
+	k_sem_take(&report_sem, K_MSEC(100)); /* Consume clear event */
+	/* Reset counters and state */
 	report_count = 0;
 	memset(&last_report, 0, sizeof(last_report));
 	k_sem_reset(&report_sem);
@@ -86,48 +90,34 @@ ZTEST(storage_integration, test_get_status)
 	zassert_true(last_report.status.is_running, "Should be running");
 }
 
-/** Test 4: Config set publishes config */
-/** TODO: Uncomment and customize if Config has fields (see battery/tick for examples) */
-/*
+/* Test 4: Config set publishes config */
 ZTEST(storage_integration, test_config_set)
 {
-	struct msg_zlet_storage_config cfg = {
-		// Fill in config field values here
-	};
-
-	zlet_storage_config(&cfg, K_MSEC(100));
+	zlet_storage_config_set(10, K_MSEC(100));
 
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report received");
 	zassert_equal(last_report.which_storage_report, MSG_ZLET_STORAGE_REPORT_CONFIG_TAG,
 		      "Expected config report");
-	// Add assertions for specific config fields
+	zassert_equal(last_report.config.max_entries, 10, "Max entries should be 10");
 }
-*/
 
-/** Test 5: Get config returns current config */
-/** TODO: Uncomment and customize if Config has fields (see battery/tick for examples) */
-/*
+/* Test 5: Get config returns current config */
 ZTEST(storage_integration, test_config_get)
 {
-	struct msg_zlet_storage_config cfg = {
-		// Fill in config field values here
-	};
-
-	// First set config
-	zlet_storage_config(&cfg, K_MSEC(100));
+	/* First set config */
+	zlet_storage_config_set(10, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report");
 
-	// Reset counter
+	/* Reset counter */
 	report_count = 0;
 
-	// Get config
+	/* Get config */
 	zlet_storage_get_config(K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report from get");
 	zassert_equal(last_report.which_storage_report, MSG_ZLET_STORAGE_REPORT_CONFIG_TAG,
 		      "Expected config report");
-	// Add assertions for specific config fields
+	zassert_equal(last_report.config.max_entries, 10, "Max entries should be 10");
 }
-*/
 
 /* Test 6: Start-Stop-Start cycle works */
 ZTEST(storage_integration, test_lifecycle_cycle)
@@ -148,5 +138,109 @@ ZTEST(storage_integration, test_lifecycle_cycle)
 	zassert_true(last_report.status.is_running, "Should be running again");
 }
 
-/** Test 7: Custom RPC tests */
-/** TODO: Add tests for zephlet-specific RPC functions (see battery for get_battery_state example) */
+/* Helper to invoke store */
+static int invoke_store(const struct msg_zlet_storage_key_value *kv)
+{
+	struct msg_zlet_storage_invoke invoke = {
+		.which_storage_invoke = MSG_ZLET_STORAGE_INVOKE_STORE_TAG,
+		.store = *kv
+	};
+	return zbus_chan_pub(&chan_zlet_storage_invoke, &invoke, K_MSEC(100));
+}
+
+/* Helper to invoke retrieve */
+static int invoke_retrieve(const struct msg_zlet_storage_key_value *kv)
+{
+	struct msg_zlet_storage_invoke invoke = {
+		.which_storage_invoke = MSG_ZLET_STORAGE_INVOKE_RETRIEVE_TAG,
+		.retrieve = *kv
+	};
+	return zbus_chan_pub(&chan_zlet_storage_invoke, &invoke, K_MSEC(100));
+}
+
+/* Test 7: Store and retrieve */
+ZTEST(storage_integration, test_store_retrieve)
+{
+	struct msg_zlet_storage_key_value kv = {
+		.key = "temp",
+		.value = {.size = 3, .bytes = {0x32, 0x35, 0x43}}, /* "25C" */
+		.value_size = 3
+	};
+
+	/* Store */
+	invoke_store(&kv);
+	/* store() returns Empty - no report expected */
+
+	/* Retrieve */
+	invoke_retrieve(&kv);
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No retrieve report");
+	zassert_equal(last_report.which_storage_report, MSG_ZLET_STORAGE_REPORT_STORAGE_ENTRY_TAG,
+		      "Expected storage_entry report");
+	zassert_true(last_report.storage_entry.found, "Key should be found");
+	zassert_equal(last_report.storage_entry.value_size, 3, "Size mismatch");
+	zassert_mem_equal(last_report.storage_entry.value.bytes, kv.value.bytes, 3, "Value mismatch");
+}
+
+/* Test 8: Retrieve nonexistent */
+ZTEST(storage_integration, test_retrieve_missing)
+{
+	struct msg_zlet_storage_key_value kv = {.key = "missing"};
+
+	invoke_retrieve(&kv);
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No retrieve report");
+	zassert_false(last_report.storage_entry.found, "Key should not be found");
+}
+
+/* Test 9: Duplicate key rejected */
+ZTEST(storage_integration, test_duplicate_rejected)
+{
+	struct msg_zlet_storage_key_value kv1 = {
+		.key = "dup",
+		.value = {.size = 1, .bytes = {0x01}},
+		.value_size = 1
+	};
+
+	/* Store once */
+	zassert_ok(invoke_store(&kv1));
+
+	/* Store again - should fail */
+	invoke_store(&kv1);
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No error event");
+	zassert_equal(last_report.which_storage_report, MSG_ZLET_STORAGE_REPORT_EVENTS_TAG,
+		      "Expected events report");
+}
+
+/* Test 10: Clear storage */
+ZTEST(storage_integration, test_clear)
+{
+	struct msg_zlet_storage_key_value kv = {.key = "test", .value = {.size = 1, .bytes = {0xAA}}, .value_size = 1};
+
+	invoke_store(&kv);
+
+	/* Clear */
+	zlet_storage_clear(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No clear event");
+
+	/* Verify cleared */
+	invoke_retrieve(&kv);
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)));
+	zassert_false(last_report.storage_entry.found, "Key should not exist after clear");
+}
+
+/* Test 11: Get storage stats */
+ZTEST(storage_integration, test_storage_stats)
+{
+	struct msg_zlet_storage_key_value kv1 = {.key = "k1", .value = {.size = 1, .bytes = {0x11}}, .value_size = 1};
+	struct msg_zlet_storage_key_value kv2 = {.key = "k2", .value = {.size = 2, .bytes = {0x22, 0x22}}, .value_size = 2};
+
+	invoke_store(&kv1);
+	invoke_store(&kv2);
+
+	zlet_storage_get_storage_stats(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stats report");
+	zassert_equal(last_report.which_storage_report, MSG_ZLET_STORAGE_REPORT_STORAGE_STATS_TAG,
+		      "Expected storage_stats report");
+	zassert_equal(last_report.storage_stats.total_entries, 2, "Should have 2 entries");
+	zassert_equal(last_report.storage_stats.max_entries, 10, "Max should be 10");
+	zassert_equal(last_report.storage_stats.total_bytes_used, 3, "Should use 3 bytes");
+}
