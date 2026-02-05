@@ -34,20 +34,22 @@ Current Components
 **Zephlets:**
 
 - ``shared``: Common types (``Empty``, ``MsgZephletStatus``), ``ZEPHLET_DEFINE()`` macro
-- ``tick``: Fully implemented reference - K_TIMER-based timed events with spinlock protection
-- ``ui``: Template with TODOs
-- ``battery``: Generated template with custom BatteryState type
-- ``position``: Template with TODOs
-- ``storage``: Template with TODOs
+- ``tick``: Fully implemented - K_TIMER-based timed events with spinlock protection
+- ``ui``: Generated template (pending implementation)
+- ``battery``: Generated template with custom BatteryState type (pending implementation)
+- ``position``: Generated template (pending implementation)
+- ``storage``: Generated template (pending implementation)
 
 **Adapters:**
 
-- ``Tick+Ui_zlet_adapter.c``: Reference implementation - listens to tick reports, invokes ui blink
+- Base logging: ``base_adapter.c`` registers shared logging module for all adapters
+- ``Tick+Ui_zlet_adapter.c``: Fully implemented - listens to tick reports, invokes ui blink
+- Additional adapters: Battery+Storage, Position+Battery, Tick+Storage (generated)
 
 Build Commands
 **************
 
-Uses ``just`` command runner (target board: mps2/an385):
+Uses ``just`` for builds (target: mps2/an385). For zephlet/adapter creation, use ``west zephlet`` commands directly.
 
 .. code-block:: console
 
@@ -63,7 +65,7 @@ Uses ``just`` command runner (target board: mps2/an385):
 
 .. code-block:: console
 
-   just gen_zephlet_files <zephlet>   # Regenerate interfaces (requires build/modules/<zephlet>_zephlet exists)
+   west zephlet gen <zephlet>   # Regenerate interfaces (requires build/modules/<zephlet>_zephlet, run from any directory)
 
 **Testing:**
 
@@ -71,7 +73,16 @@ Uses ``just`` command runner (target board: mps2/an385):
 
    just test_unit                     # Run unit tests
    just test_integration             # Run integration tests
-   just test_tick_zephlet            # Run tick zephlet integration tests
+   just test_zephlet tick            # Run tick zephlet integration tests
+
+**Integration Tests:**
+
+Each zephlet includes ``tests/integration/`` with 6 core lifecycle tests:
+
+- start, stop, get_status, lifecycle cycle
+- Config tests (get_config, config) if zephlet has config
+- Run via: ``just test_zephlet <zephlet_name>``
+- Example: ``just test_zephlet tick`` runs tick's integration tests
 
 Workflows
 *********
@@ -80,18 +91,17 @@ Workflows
 
 .. code-block:: console
 
-   just new_zephlet_interactive
+   west zephlet new [-n NAME] [-d DESC] [-a AUTHOR]
 
-Interactive prompts create .proto, .c, CMakeLists.txt, Kconfig, module.yml. Edit .proto to define Config/Events/RPCs, run ``just b`` to bootstrap .c, implement TODOs in .c, add to root CMakeLists.txt EXTRA_ZEPHYR_MODULES, enable CONFIG_ZEPHLET_<ZEPHLET>=y, rebuild.
+Interactive/non-interactive. Edit .proto (Config/Events/RPCs), run ``just b`` to bootstrap .c, implement TODOs, add to root CMakeLists EXTRA_ZEPHYR_MODULES, enable CONFIG_ZEPHLET_<ZEPHLET>=y, rebuild.
 
 **Creating Adapters:**
 
 .. code-block:: console
 
-   just new_adapter_interactive        # Interactive field selection
-   just new_adapter <origin> <dest>    # Generate all fields
+   west zephlet new-adapter [-o ORIGIN] [-d DEST] [-i]
 
-Prompts for origin/destination zephlets and report fields to handle. Generates adapter.c with TODOs, updates Kconfig and CMakeLists.txt. Implement TODOs, rebuild. Auto-enabled via CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=y.
+Interactive (-i) field selection or non-interactive (all fields). Auto-generates adapter.c, updates Kconfig/CMakeLists. Implement TODOs, rebuild. Auto-enabled via CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=y.
 
 Key Concepts
 ************
@@ -143,11 +153,15 @@ Enable zephlets in ``prj.conf``:
    CONFIG_ZEPHLET_<ZEPHLET>=y
    CONFIG_ZEPHLET_<ZEPHLET>_LOG_LEVEL_DBG=y
 
-**Adapters:** Enabled by default when generated. Both origin and destination zephlets must be enabled for the adapter to function. To disable a specific adapter:
+**Adapter Dependencies:** Both origin and destination zephlets must be enabled for adapter to function.
+
+**Adapters:** Enabled by default when generated. To disable a specific adapter:
 
 .. code-block:: kconfig
 
    CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=n
+
+**Current Configuration:** All zephlets enabled with debug logging (CONFIG_ZEPHLET_*_LOG_LEVEL_DBG=y). All generated adapters enabled.
 
 References
 **********
