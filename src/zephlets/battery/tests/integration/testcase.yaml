@@ -1,6 +1,6 @@
 tests:
-  tick.integration:
-    tags: integration zephlet tick
+  battery.integration:
+    tags: integration zephlet battery
     harness: ztest
     platform_allow:
       - native_sim

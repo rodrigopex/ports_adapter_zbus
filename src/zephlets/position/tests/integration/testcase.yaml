@@ -1,6 +1,6 @@
 tests:
-  tick.integration:
-    tags: integration zephlet tick
+  position.integration:
+    tags: integration zephlet position
     harness: ztest
     platform_allow:
       - native_sim

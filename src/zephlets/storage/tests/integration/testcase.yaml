@@ -1,6 +1,6 @@
 tests:
-  tick.integration:
-    tags: integration zephlet tick
+  storage.integration:
+    tags: integration zephlet storage
     harness: ztest
     platform_allow:
       - native_sim
