@@ -9,6 +9,10 @@
 
 LOG_MODULE_DECLARE(zlet_ui, CONFIG_ZEPHLET_UI_LOG_LEVEL);
 
+/* Blink counter */
+static uint32_t blink_count = 0;
+static struct k_spinlock blink_lock;
+
 /* TODO: Add zephlet-specific resources (timers, work queues, threads) */
 static int start(const struct zephlet *zephlet)
 {
@@ -31,17 +35,14 @@ static int stop(const struct zephlet *zephlet)
 	struct msg_zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
-		status = data->status;
-	}
+		if (!data->status.is_running) {
+			LOG_DBG("Zephlet has not started yet!");
+		}
 
-	if (!status.is_running) {
-		LOG_DBG("Zephlet has not started yet!");
-	}
+		/* TODO: Stop zephlet resources (timers, threads, etc.) */
 
-	/* TODO: Stop zephlet resources (timers, threads, etc.) */
-
-	K_SPINLOCK(&data->lock) {
 		data->status.is_running = false;
+		status = data->status;
 	}
 
 	return zlet_ui_report_status(&status, K_MSEC(250));
@@ -100,16 +101,16 @@ static int get_events(const struct zephlet *zephlet)
 /* RPC returns Empty - publish to report field: empty */
 static int blink(const struct zephlet *zephlet)
 {
-	struct zlet_ui_data *data = zephlet->data;
+	struct msg_zlet_ui_events events = {0};
 
-	K_SPINLOCK(&data->lock) {
-		/* TODO: Implement blink logic */
+	K_SPINLOCK(&blink_lock) {
+		blink_count++;
+		events.blink = blink_count;
 	}
-	/* Request-response RPC */
-	LOG_DBG("blink!");
-	/* TODO: Prepare report data and publish */
-	/* return zlet_ui_report_empty(report_data, K_MSEC(250)); */
-	return 0;
+
+	LOG_INF("LED blink #%u", events.blink);
+
+	return zlet_ui_report_events(&events, K_MSEC(250));
 }
 
 static struct zlet_ui_api api = {

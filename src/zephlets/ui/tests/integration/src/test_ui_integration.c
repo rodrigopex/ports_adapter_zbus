@@ -149,4 +149,28 @@ ZTEST(ui_integration, test_lifecycle_cycle)
 }
 
 /** Test 7: Custom RPC tests */
-/** TODO: Add tests for zephlet-specific RPC functions (see battery for get_battery_state example) */
+ZTEST(ui_integration, test_blink)
+{
+	/* Wait for initial events */
+	zlet_ui_get_events(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No initial events report");
+	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+		      "Expected events report");
+	zassert_equal(last_report.events.blink, 0, "Initial blink count should be 0");
+
+	/* Call blink RPC */
+	zlet_ui_blink(K_MSEC(100));
+
+	/* Wait for events report */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No blink events report");
+	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+		      "Expected events report");
+	zassert_equal(last_report.events.blink, 1, "Blink count should be 1");
+
+	/* Call again */
+	zlet_ui_blink(K_MSEC(100));
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No second blink events report");
+	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+		      "Expected events report");
+	zassert_equal(last_report.events.blink, 2, "Blink count should be 2");
+}
