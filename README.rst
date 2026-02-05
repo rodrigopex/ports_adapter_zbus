@@ -11,8 +11,8 @@ Architecture
 
 **Components:**
 
-1. **Zephlets** (``zephlets/``): Domain logic modules with no direct dependencies
-2. **Adapters** (``adapters/``): Compose zephlets via channel bridging
+1. **Zephlets** (``src/zephlets/``): Domain logic modules with no direct dependencies
+2. **Adapters** (``src/adapters/``): Compose zephlets via channel bridging
 3. **Main** (``src/main.c``): Lifecycle orchestration
 
 **Two-Channel Pattern:**

@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-# Get absolute path to project root (go up 4 levels from tests/integration)
-get_filename_component(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../.." ABSOLUTE)
-set(ZEPHLETS_ROOT "${PROJECT_ROOT}/zephlets")
+# Get absolute path to project root (go up 5 levels from tests/integration)
+get_filename_component(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../.." ABSOLUTE)
+set(ZEPHLETS_ROOT "${PROJECT_ROOT}/src/zephlets")
 
 # Initialize global property for proto files (modules will append to this)
 set_property(GLOBAL PROPERTY PROTO_FILES_LIST)
 
 # Set up external modules - they register their proto files
+# shared_zephlet is loaded via west.yml, so only add application zephlets
 list(APPEND EXTRA_ZEPHYR_MODULES
-    "${ZEPHLETS_ROOT}/shared"
     "${ZEPHLETS_ROOT}/tick"
 )
 
@@ -25,9 +25,9 @@ set(NANOPB_OPTIONS "--c-style")
 get_property(LOCAL_PROTO_FILES_LIST GLOBAL PROPERTY PROTO_FILES_LIST)
 
 # IMPORTANT: Override CMAKE_CURRENT_SOURCE_DIR temporarily so nanopb generates
-# files with correct directory structure (zephlets/tick/*.pb.h)
+# files with correct directory structure (tick/*.pb.h)
 set(SAVED_CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(CMAKE_CURRENT_SOURCE_DIR ${PROJECT_ROOT})
+set(CMAKE_CURRENT_SOURCE_DIR "${PROJECT_ROOT}/src/zephlets")
 zephyr_nanopb_sources(app ${LOCAL_PROTO_FILES_LIST})
 set(CMAKE_CURRENT_SOURCE_DIR ${SAVED_CMAKE_CURRENT_SOURCE_DIR})
 
