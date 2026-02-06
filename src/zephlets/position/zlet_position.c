@@ -4,6 +4,7 @@
 #include "zlet_position_interface.h"
 
 #include "zlet_position.h"
+#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -84,60 +85,98 @@ static void zlet_position_timer_handler(struct k_timer *timer_id)
 		}
 	}
 
-	zlet_position_report_events(&events, K_NO_WAIT);
+	/* Async event - no context */
+	zlet_position_report_events_async(&events, K_NO_WAIT);
 }
 
-static int start(const struct zephlet *zephlet)
+/* Called by init_fn during SYS_INIT - sets is_ready on success */
+static int zlet_position_init(const struct zephlet *zephlet)
+{
+	struct zlet_position_data *data = zephlet->data;
+	int ret = 0;
+
+	K_SPINLOCK(&data->lock) {
+		/* Initialize timer (already done by K_TIMER_DEFINE) */
+		if (ret == 0) {
+			data->status.is_ready = true;
+		}
+	}
+
+	return ret;
+}
+
+static int start(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_position_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
-		data->status.is_running = true;
+		if (!data->status.is_ready) {
+			ret = -ENODEV;
+		} else if (data->status.is_running) {
+			ret = -EALREADY;
+		} else {
+			data->status.is_running = true;
+		}
 		status = data->status;
 	}
 
-	/* Start position monitoring timer */
-	k_timer_start(&timer_zlet_position, K_MSEC(update_interval_ms),
-		      K_MSEC(update_interval_ms));
+	if (ret == 0) {
+		/* Start position monitoring timer */
+		k_timer_start(&timer_zlet_position, K_MSEC(update_interval_ms),
+			      K_MSEC(update_interval_ms));
+	}
 
-	return zlet_position_report_status(&status, K_MSEC(250));
+	return zlet_position_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int stop(const struct zephlet *zephlet)
+static int stop(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_position_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		if (!data->status.is_running) {
-			LOG_DBG("Zephlet has not started yet!");
+			ret = -EALREADY;
+		} else {
+			data->status.is_running = false;
 		}
-		data->status.is_running = false;
 		status = data->status;
 	}
 
-	k_timer_stop(&timer_zlet_position);
+	if (ret == 0) {
+		k_timer_stop(&timer_zlet_position);
+	}
 
-	return zlet_position_report_status(&status, K_MSEC(250));
+	return zlet_position_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int get_status(const struct zephlet *zephlet)
+static int get_status(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_position_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
-	return zlet_position_report_status(&status, K_MSEC(250));
+	return zlet_position_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_zlet_position_config *config)
+static int config(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_position_config *config)
 {
 	struct zlet_position_data *data = zephlet->data;
 	bool is_running;
+	int ret = 0;
+
+	/* Validate config */
+	if (config->update_interval_ms == 0) {
+		ret = -EINVAL;
+		goto report;
+	}
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
@@ -156,43 +195,47 @@ static int config(const struct zephlet *zephlet, const struct msg_zlet_position_
 			      K_MSEC(update_interval_ms));
 	}
 
-	return zlet_position_report_config(config, K_MSEC(250));
+report:
+	return zlet_position_report_config(context, ret, config, K_MSEC(250));
 }
 
-static int get_config(const struct zephlet *zephlet)
+static int get_config(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_position_data *data = zephlet->data;
 	struct msg_zlet_position_config config;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
-	return zlet_position_report_config(&config, K_MSEC(250));
+	return zlet_position_report_config(context, ret, &config, K_MSEC(250));
 }
 
 /* RPC returns MsgZletPosition.Events - publish to report field: events */
-static int get_events(const struct zephlet *zephlet)
+static int get_events(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_position_data *data = zephlet->data;
 	struct msg_zlet_position_events events;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		events = data->events;
 	}
 
-	return zlet_position_report_events(&events, K_MSEC(250));
+	return zlet_position_report_events(context, ret, &events, K_MSEC(250));
 }
 
-static int get_position(const struct zephlet *zephlet)
+static int get_position(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct msg_zlet_position_position_data position;
+	int ret = 0;
 
 	K_SPINLOCK(&position_lock) {
 		position = current_position;
 	}
 
-	return zlet_position_report_position_data(&position, K_MSEC(250));
+	return zlet_position_report_position_data(context, ret, &position, K_MSEC(250));
 }
 
 static struct zlet_position_api api = {
@@ -213,7 +256,15 @@ static struct zlet_position_data data = {
 
 int zlet_position_init_fn(const struct zephlet *self)
 {
-	int err = zlet_position_set_implementation(self);
+	int err;
+
+	/* Initialize zephlet resources */
+	err = zlet_position_init(self);
+
+	/* Register implementation */
+	if (err == 0) {
+		err = zlet_position_set_implementation(self);
+	}
 
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 

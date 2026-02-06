@@ -23,25 +23,27 @@ message MsgZletBattery {
     }
 
     message Invoke {
+        optional MsgAPIContext context = 999;  /* For correlation tracking */
         oneof battery_invoke {
-
             Empty start = 1;
             Empty stop = 2;
             Empty get_status = 3;
             Config config = 4;
             Empty get_config = 5;
-            Empty get_battery_state = 6;
-            Empty get_events = 7;
-
+            Empty get_events = 6;
+            /* Custom commands start at 7+ */
+            Empty get_battery_state = 7;
         }
     }
 
     message Report {
+        optional MsgAPIContext context = 999;  /* Present only for invoke responses */
         oneof battery_report {
             MsgZephletStatus status = 1;
             Config config = 2;
-            BatteryState battery_state = 3;
-            Events events = 4;
+            Events events = 3;
+            /* Custom reports start at 4+ */
+            BatteryState battery_state = 4;
         }
     }
 }

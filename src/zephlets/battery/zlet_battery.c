@@ -4,6 +4,7 @@
 #include "zlet_battery_interface.h"
 
 #include "zlet_battery.h"
+#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -51,62 +52,91 @@ static void zlet_battery_timer_handler(struct k_timer *timer_id)
 	k_spin_unlock(&battery_state_lock, key);
 
 	if (events.has_low_battery) {
-		zlet_battery_report_events(&events, K_NO_WAIT);
+		/* Async event - no context */
+		zlet_battery_report_events_async(&events, K_NO_WAIT);
 	}
 }
 
-/* TODO: Add zephlet-specific resources (timers, work queues, threads) */
-static int start(const struct zephlet *zephlet)
+/* Called by init_fn during SYS_INIT - sets is_ready on success */
+static int zlet_battery_init(const struct zephlet *zephlet)
+{
+	struct zlet_battery_data *data = zephlet->data;
+	int ret = 0;
+
+	K_SPINLOCK(&data->lock) {
+		/* Initialize timer (already done by K_TIMER_DEFINE) */
+		if (ret == 0) {
+			data->status.is_ready = true;
+		}
+	}
+
+	return ret;
+}
+
+static int start(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
-		data->status.is_running = true;
+		if (!data->status.is_ready) {
+			ret = -ENODEV;
+		} else if (data->status.is_running) {
+			ret = -EALREADY;
+		} else {
+			data->status.is_running = true;
+		}
 		status = data->status;
 	}
 
-	/* Start battery monitoring timer - 1 second interval */
-	k_timer_start(&timer_zlet_battery, K_MSEC(1000), K_MSEC(1000));
+	if (ret == 0) {
+		/* Start battery monitoring timer - 1 second interval */
+		k_timer_start(&timer_zlet_battery, K_MSEC(1000), K_MSEC(1000));
+	}
 
-	return zlet_battery_report_status(&status, K_MSEC(250));
+	return zlet_battery_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int stop(const struct zephlet *zephlet)
+static int stop(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		if (!data->status.is_running) {
-			LOG_DBG("Zephlet has not started yet!");
+			ret = -EALREADY;
+		} else {
+			data->status.is_running = false;
 		}
-
-		/* Stop battery monitoring */
-		data->status.is_running = false;
 		status = data->status;
 	}
 
-	k_timer_stop(&timer_zlet_battery);
+	if (ret == 0) {
+		k_timer_stop(&timer_zlet_battery);
+	}
 
-	return zlet_battery_report_status(&status, K_MSEC(250));
+	return zlet_battery_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int get_status(const struct zephlet *zephlet)
+static int get_status(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
-	return zlet_battery_report_status(&status, K_MSEC(250));
+	return zlet_battery_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_zlet_battery_config *config)
+static int config(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_battery_config *config)
 {
 	struct zlet_battery_data *data = zephlet->data;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
@@ -118,44 +148,47 @@ static int config(const struct zephlet *zephlet, const struct msg_zlet_battery_c
 	low_battery_threshold = config->low_battery_threshold;
 	k_spin_unlock(&battery_state_lock, key);
 
-	return zlet_battery_report_config(config, K_MSEC(250));
+	return zlet_battery_report_config(context, ret, config, K_MSEC(250));
 }
 
-static int get_config(const struct zephlet *zephlet)
+static int get_config(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zlet_battery_config config;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
-	return zlet_battery_report_config(&config, K_MSEC(250));
+	return zlet_battery_report_config(context, ret, &config, K_MSEC(250));
 }
 
 /* RPC returns MsgBatteryZephlet.BatteryState - publish to report field: battery_state */
-static int get_battery_state(const struct zephlet *zephlet)
+static int get_battery_state(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct msg_zlet_battery_battery_state state;
+	int ret = 0;
 
 	k_spinlock_key_t key = k_spin_lock(&battery_state_lock);
 	state = battery_state;
 	k_spin_unlock(&battery_state_lock, key);
 
-	return zlet_battery_report_battery_state(&state, K_MSEC(250));
+	return zlet_battery_report_battery_state(context, ret, &state, K_MSEC(250));
 }
 
 /* RPC returns MsgZletBattery.Events - publish to report field: events */
-static int get_events(const struct zephlet *zephlet)
+static int get_events(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_battery_data *data = zephlet->data;
 	struct msg_zlet_battery_events events;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		events = data->events;
 	}
 
-	return zlet_battery_report_events(&events, K_MSEC(250));
+	return zlet_battery_report_events(context, ret, &events, K_MSEC(250));
 }
 
 static struct zlet_battery_api api = {
@@ -176,7 +209,15 @@ static struct zlet_battery_data data = {
 
 int zlet_battery_init_fn(const struct zephlet *self)
 {
-	int err = zlet_battery_set_implementation(self);
+	int err;
+
+	/* Initialize zephlet resources */
+	err = zlet_battery_init(self);
+
+	/* Register implementation */
+	if (err == 0) {
+		err = zlet_battery_set_implementation(self);
+	}
 
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 

@@ -4,6 +4,7 @@
 #include "zlet_storage_interface.h"
 
 #include "zlet_storage.h"
+#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -29,80 +30,107 @@ static uint32_t hash_key(const char *key)
 	}
 	return hash % MAX_STORAGE_ENTRIES;
 }
-static int start(const struct zephlet *zephlet)
+
+/* Called by init_fn during SYS_INIT - sets is_ready on success */
+static int zlet_storage_init(const struct zephlet *zephlet)
+{
+	struct zlet_storage_data *data = zephlet->data;
+	int ret = 0;
+
+	K_SPINLOCK(&data->lock) {
+		/* Initialize storage (already zero-initialized) */
+		if (ret == 0) {
+			data->status.is_ready = true;
+		}
+	}
+
+	return ret;
+}
+
+static int start(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_storage_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
-		data->status.is_running = true;
+		if (!data->status.is_ready) {
+			ret = -ENODEV;
+		} else if (data->status.is_running) {
+			ret = -EALREADY;
+		} else {
+			data->status.is_running = true;
+		}
 		status = data->status;
 	}
 
-	/* TODO: Start zephlet resources (timers, threads, etc.) */
-
-	return zlet_storage_report_status(&status, K_MSEC(250));
+	return zlet_storage_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int stop(const struct zephlet *zephlet)
+static int stop(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_storage_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		if (!data->status.is_running) {
-			LOG_DBG("Zephlet has not started yet!");
+			ret = -EALREADY;
+		} else {
+			data->status.is_running = false;
 		}
-		data->status.is_running = false;
 		status = data->status;
 	}
 
-	return zlet_storage_report_status(&status, K_MSEC(250));
+	return zlet_storage_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int get_status(const struct zephlet *zephlet)
+static int get_status(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_storage_data *data = zephlet->data;
 	struct msg_zephlet_status status;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
-	return zlet_storage_report_status(&status, K_MSEC(250));
+	return zlet_storage_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_zlet_storage_config *config)
+static int config(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_storage_config *config)
 {
 	struct zlet_storage_data *data = zephlet->data;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
+		/* Config is read-only (max_entries) */
 	}
 
-	/* TODO: Apply configuration changes to zephlet resources */
-
-	return zlet_storage_report_config(config, K_MSEC(250));
+	return zlet_storage_report_config(context, ret, config, K_MSEC(250));
 }
 
-static int get_config(const struct zephlet *zephlet)
+static int get_config(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_storage_data *data = zephlet->data;
 	struct msg_zlet_storage_config config;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
-	return zlet_storage_report_config(&config, K_MSEC(250));
+	return zlet_storage_report_config(context, ret, &config, K_MSEC(250));
 }
 
-static int store(const struct zephlet *zephlet, const struct msg_zlet_storage_key_value *kv)
+static int store(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_storage_key_value *kv)
 {
 	struct msg_zlet_storage_events events = {0};
 	uint32_t slot = hash_key(kv->key);
 	uint32_t start_slot = slot;
 	bool stored = false;
+	int ret = 0;
 
 	k_spinlock_key_t key = k_spin_lock(&storage_lock);
 
@@ -116,7 +144,7 @@ static int store(const struct zephlet *zephlet, const struct msg_zlet_storage_ke
 			events.has_error_message = true;
 			strncpy(events.error_message, "Key already exists", 63);
 			events.timestamp = k_uptime_get_32();
-			zlet_storage_report_events(&events, K_NO_WAIT);
+			zlet_storage_report_events_async(&events, K_NO_WAIT);
 			return -EEXIST;
 		}
 
@@ -142,18 +170,20 @@ static int store(const struct zephlet *zephlet, const struct msg_zlet_storage_ke
 		events.has_storage_full = true;
 		events.storage_full = true;
 		events.timestamp = k_uptime_get_32();
-		zlet_storage_report_events(&events, K_NO_WAIT);
-		return -ENOMEM;
+		zlet_storage_report_events_async(&events, K_NO_WAIT);
+		ret = -ENOMEM;
 	}
 
-	return 0;
+	/* RPC returns Empty, no report needed for success case */
+	return ret;
 }
 
-static int retrieve(const struct zephlet *zephlet, const struct msg_zlet_storage_key_value *kv)
+static int retrieve(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_storage_key_value *kv)
 {
 	struct msg_zlet_storage_storage_entry entry = {0};
 	uint32_t slot = hash_key(kv->key);
 	uint32_t start_slot = slot;
+	int ret = 0;
 
 	K_SPINLOCK(&storage_lock) {
 		/* Linear probing search */
@@ -178,10 +208,10 @@ static int retrieve(const struct zephlet *zephlet, const struct msg_zlet_storage
 		} while (slot != start_slot);
 	}
 
-	return zlet_storage_report_storage_entry(&entry, K_MSEC(250));
+	return zlet_storage_report_storage_entry(context, ret, &entry, K_MSEC(250));
 }
 
-static int clear(const struct zephlet *zephlet)
+static int clear(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct msg_zlet_storage_events events = {0};
 
@@ -191,15 +221,17 @@ static int clear(const struct zephlet *zephlet)
 	}
 
 	events.timestamp = k_uptime_get_32();
-	zlet_storage_report_events(&events, K_NO_WAIT);
+	zlet_storage_report_events_async(&events, K_NO_WAIT);
 
+	/* RPC returns Empty, operation successful */
 	return 0;
 }
 
-static int get_storage_stats(const struct zephlet *zephlet)
+static int get_storage_stats(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct msg_zlet_storage_storage_stats stats = {0};
 	int32_t bytes_used = 0;
+	int ret = 0;
 
 	K_SPINLOCK(&storage_lock) {
 		stats.total_entries = entry_count;
@@ -212,20 +244,21 @@ static int get_storage_stats(const struct zephlet *zephlet)
 		stats.total_bytes_used = bytes_used;
 	}
 
-	return zlet_storage_report_storage_stats(&stats, K_MSEC(250));
+	return zlet_storage_report_storage_stats(context, ret, &stats, K_MSEC(250));
 }
 
 /* RPC returns MsgZletStorage.Events - publish to report field: events */
-static int get_events(const struct zephlet *zephlet)
+static int get_events(const struct zephlet *zephlet, const struct msg_api_context *context)
 {
 	struct zlet_storage_data *data = zephlet->data;
 	struct msg_zlet_storage_events events;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		events = data->events;
 	}
 
-	return zlet_storage_report_events(&events, K_MSEC(250));
+	return zlet_storage_report_events(context, ret, &events, K_MSEC(250));
 }
 
 static struct zlet_storage_api api = {
@@ -249,7 +282,15 @@ static struct zlet_storage_data data = {
 
 int zlet_storage_init_fn(const struct zephlet *self)
 {
-	int err = zlet_storage_set_implementation(self);
+	int err;
+
+	/* Initialize zephlet resources */
+	err = zlet_storage_init(self);
+
+	/* Register implementation */
+	if (err == 0) {
+		err = zlet_storage_set_implementation(self);
+	}
 
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 

@@ -27,6 +27,7 @@ message MsgZletPosition {
     }
 
     message Invoke {
+        optional MsgAPIContext context = 999;  /* For correlation tracking */
         oneof position_invoke {
 
             Empty start = 1;
@@ -41,6 +42,7 @@ message MsgZletPosition {
     }
 
     message Report {
+        optional MsgAPIContext context = 999;  /* Present only for invoke responses */
         oneof position_report {
             MsgZephletStatus status = 1;
             Config config = 2;

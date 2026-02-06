@@ -13,14 +13,35 @@ static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
 
 	switch (tick_report->which_tick_report) {
 	case MSG_ZLET_TICK_REPORT_STATUS_TAG:
-		LOG_DBG("Discarded reported status");
-		break;
-	case MSG_ZLET_TICK_REPORT_EVENTS_TAG:
-		if (tick_report->events.has_tick) {
-			LOG_DBG("Received Tick Zephlet report at %d, invoking UI Zephlet blink",
-				tick_report->events.timestamp);
-			zlet_ui_blink(K_NO_WAIT);
+		/* Check if this is a response (vs async event) */
+		if (tick_report->has_context) {
+			uint32_t correlation_id = tick_report->context.correlation_id;
+			int return_code = tick_report->context.return_code;
+
+			if (return_code < 0) {
+				LOG_WRN("tick status failed: %d", return_code);
+			} else {
+				LOG_DBG("tick status success (corr_id=%u, running=%d, ready=%d)",
+					correlation_id,
+					tick_report->status.is_running,
+					tick_report->status.is_ready);
+			}
+		} else {
+			LOG_DBG("Async status event from tick");
 		}
+		break;
+
+	case MSG_ZLET_TICK_REPORT_EVENTS_TAG:
+		/* Events are typically async (no context) */
+		if (tick_report->events.has_tick) {
+			LOG_DBG("Received Tick event at %d, invoking UI blink",
+				tick_report->events.timestamp);
+			/* Start new request chain (no correlation) */
+			zlet_ui_blink(0, K_NO_WAIT);
+		}
+		break;
+
+	default:
 		break;
 	}
 }

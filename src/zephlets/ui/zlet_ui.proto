@@ -15,6 +15,7 @@ message MsgZletUi {
   }
 
   message Invoke {
+    optional MsgAPIContext context = 999;  /* For correlation tracking */
     oneof ui_invoke {
       Empty start = 1;
       Empty stop = 2;
@@ -27,6 +28,7 @@ message MsgZletUi {
   }
 
   message Report {
+    optional MsgAPIContext context = 999;  /* Present only for invoke responses */
     oneof ui_report {
       MsgZephletStatus status = 1;
       Config config = 2;
