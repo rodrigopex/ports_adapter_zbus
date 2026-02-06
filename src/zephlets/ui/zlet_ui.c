@@ -30,7 +30,7 @@ static int zlet_ui_init(const struct zephlet *zephlet)
 	return ret;
 }
 
-static int start(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void start(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zephlet_status status;
@@ -43,15 +43,18 @@ static int start(const struct zephlet *zephlet, const struct msg_api_context *co
 			ret = -EALREADY;
 		} else {
 			data->status.is_running = true;
-			/* TODO: Start zephlet resources (timers, threads, etc.) */
 		}
 		status = data->status;
 	}
 
-	return zlet_ui_report_status(context, ret, &status, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static int stop(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void stop(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zephlet_status status;
@@ -62,15 +65,18 @@ static int stop(const struct zephlet *zephlet, const struct msg_api_context *con
 			ret = -EALREADY;
 		} else {
 			data->status.is_running = false;
-			/* TODO: Stop zephlet resources (timers, threads, etc.) */
 		}
 		status = data->status;
 	}
 
-	return zlet_ui_report_status(context, ret, &status, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static int get_status(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void get_status(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zephlet_status status;
@@ -80,10 +86,14 @@ static int get_status(const struct zephlet *zephlet, const struct msg_api_contex
 		status = data->status;
 	}
 
-	return zlet_ui_report_status(context, ret, &status, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_ui_config *config)
+static void config(const struct zephlet *zephlet, struct msg_api_context *context, const struct msg_zlet_ui_config *config)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	int ret = 0;
@@ -93,10 +103,14 @@ static int config(const struct zephlet *zephlet, const struct msg_api_context *c
 		/* TODO: Apply configuration changes to zephlet resources */
 	}
 
-	return zlet_ui_report_config(context, ret, config, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_ui_report_config(context, config, K_MSEC(250));
 }
 
-static int get_config(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void get_config(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zlet_ui_config config;
@@ -106,11 +120,15 @@ static int get_config(const struct zephlet *zephlet, const struct msg_api_contex
 		config = data->config;
 	}
 
-	return zlet_ui_report_config(context, ret, &config, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_ui_report_config(context, &config, K_MSEC(250));
 }
 
 /* RPC returns MsgZletUi.Events - publish to report field: events */
-static int get_events(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void get_events(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zlet_ui_events events;
@@ -120,13 +138,18 @@ static int get_events(const struct zephlet *zephlet, const struct msg_api_contex
 		events = data->events;
 	}
 
-	return zlet_ui_report_events(context, ret, &events, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_ui_report_events(context, &events, K_MSEC(250));
 }
 
 /* RPC returns Empty - triggered by adapter (no direct response needed) */
-static int blink(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void blink(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct msg_zlet_ui_events events = {0};
+	int ret = 0;
 
 	K_SPINLOCK(&blink_lock) {
 		blink_count++;
@@ -135,8 +158,12 @@ static int blink(const struct zephlet *zephlet, const struct msg_api_context *co
 
 	LOG_INF("LED blink #%u", events.blink);
 
+	if (context) {
+		context->return_code = ret;
+	}
+
 	/* Async event report (no context correlation) */
-	return zlet_ui_report_events_async(&events, K_MSEC(250));
+	zlet_ui_report_events_async(&events, K_MSEC(250));
 }
 
 static struct zlet_ui_api api = {

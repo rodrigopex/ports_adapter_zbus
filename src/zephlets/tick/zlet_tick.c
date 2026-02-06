@@ -35,12 +35,12 @@ static int zlet_tick_init(const struct zephlet *zephlet)
 	return ret;
 }
 
-static int start(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void start(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	struct msg_zephlet_status status;
-	int ret = 0;
 	int delay;
+	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
@@ -66,11 +66,14 @@ static int start(const struct zephlet *zephlet, const struct msg_api_context *co
 	LOG_DBG("Zephlet started with delay %d ms!", delay);
 
 cleanup:
+	if (context) {
+		context->return_code = ret;
+	}
 
-	return zlet_tick_report_status(context, ret, &status, K_MSEC(250));
+	zlet_tick_report_status(context, &status, K_MSEC(250));
 }
 
-static int stop(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void stop(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	struct msg_zephlet_status status;
@@ -90,10 +93,14 @@ static int stop(const struct zephlet *zephlet, const struct msg_api_context *con
 		LOG_DBG("Zephlet stopped!");
 	}
 
-	return zlet_tick_report_status(context, ret, &status, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_tick_report_status(context, &status, K_MSEC(250));
 }
 
-static int get_status(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void get_status(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	struct msg_zephlet_status status;
@@ -103,11 +110,15 @@ static int get_status(const struct zephlet *zephlet, const struct msg_api_contex
 		status = data->status;
 	}
 
-	return zlet_tick_report_status(context, ret, &status, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_tick_report_status(context, &status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_api_context *context,
-		  const struct msg_zlet_tick_config *new_config)
+static void config(const struct zephlet *zephlet, struct msg_api_context *context,
+		   const struct msg_zlet_tick_config *new_config)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	int ret = 0;
@@ -123,10 +134,14 @@ static int config(const struct zephlet *zephlet, const struct msg_api_context *c
 	}
 
 report:
-	return zlet_tick_report_config(context, ret, new_config, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_tick_report_config(context, new_config, K_MSEC(250));
 }
 
-static int get_config(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void get_config(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	struct msg_zlet_tick_config config;
@@ -136,11 +151,15 @@ static int get_config(const struct zephlet *zephlet, const struct msg_api_contex
 		config = data->config;
 	}
 
-	return zlet_tick_report_config(context, ret, &config, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_tick_report_config(context, &config, K_MSEC(250));
 }
 
 /* RPC returns MsgZletTick.Events - publish to report field: events */
-static int get_events(const struct zephlet *zephlet, const struct msg_api_context *context)
+static void get_events(const struct zephlet *zephlet, struct msg_api_context *context)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	struct msg_zlet_tick_events events;
@@ -150,7 +169,11 @@ static int get_events(const struct zephlet *zephlet, const struct msg_api_contex
 		events = data->events;
 	}
 
-	return zlet_tick_report_events(context, ret, &events, K_MSEC(250));
+	if (context) {
+		context->return_code = ret;
+	}
+
+	zlet_tick_report_events(context, &events, K_MSEC(250));
 }
 
 static struct zlet_tick_api api = {
