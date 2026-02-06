@@ -36,15 +36,17 @@
 
 ### Application Zephlets
 
-- **tick** (REFERENCE): Fully implemented - K_TIMER, spinlocks, timed events
-- **ui**: Generated template with TODOs
-- **battery** (GENERATED EXAMPLE): Generated template, custom BatteryState type
-- **position**: Generated template with TODOs
-- **storage**: Generated template with TODOs
+**All zephlets use context API** (correlation_id, return_code, has_context flag). **Proto field validation** enforces reserved ranges at build time.
+
+- **tick** (REFERENCE): Full implementation - init sets is_ready, start/stop controls is_running, timer uses _async(), context threading
+- **ui**: Blink command, demonstrates simple context API usage
+- **battery**: Timer monitoring, low_battery events, config with voltage_operation/threshold
+- **position**: Random walk simulation, position_changed events, get_position query
+- **storage**: In-memory key-value store, demonstrates multiple custom commands (store, retrieve, clear, get_storage_stats)
 
 ### Application Adapters
 
-**Reference:** `Tick+Ui_zlet_adapter.c` (manual, fully implemented) - listens tick reports → calls `zlet_ui_blink()`.
+**Reference:** `Tick+Ui_zlet_adapter.c` - listens tick reports, checks has_context flag, extracts correlation_id/return_code, distinguishes responses from async events.
 **base_adapter.c:** Registers shared logging module for all adapters.
 
 ## Configuration
