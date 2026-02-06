@@ -32,15 +32,11 @@ Protobuf definitions (`zlet_<name>.proto`) drive automatic generation of interfa
 - `shared`: Common types (`Empty`, `MsgZephletStatus`), `ZEPHLET_DEFINE()` macro
 - `tick`: Fully implemented - K_TIMER-based timed events with spinlock protection
 - `ui`: Generated template (pending implementation)
-- `battery`: Generated template with custom BatteryState type (pending implementation)
-- `position`: Generated template (pending implementation)
-- `storage`: Generated template (pending implementation)
 
 **Adapters:**
 
 - Base logging: `base_adapter.c` registers shared logging module for all adapters
 - `Tick+Ui_zlet_adapter.c`: Fully implemented - listens to tick reports, invokes ui blink
-- Additional adapters: Battery+Storage, Position+Battery, Tick+Storage (generated)
 
 ## Build Commands
 

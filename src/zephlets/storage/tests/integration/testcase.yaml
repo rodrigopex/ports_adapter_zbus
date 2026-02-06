@@ -1,8 +1,0 @@
-tests:
-  storage.integration:
-    tags: integration zephlet storage
-    harness: ztest
-    platform_allow:
-      - native_sim
-      - mps2/an385 # A qemu alternative for macos and windows
-    timeout: 60

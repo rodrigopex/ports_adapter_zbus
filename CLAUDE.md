@@ -40,9 +40,6 @@
 
 - **tick** (REFERENCE): Full implementation - init sets is_ready, start/stop controls is_running, timer uses _async(), context threading
 - **ui**: Blink command, demonstrates simple context API usage
-- **battery**: Timer monitoring, low_battery events, config with voltage_operation/threshold
-- **position**: Random walk simulation, position_changed events, get_position query
-- **storage**: In-memory key-value store, demonstrates multiple custom commands (store, retrieve, clear, get_storage_stats)
 
 ### Application Adapters
 

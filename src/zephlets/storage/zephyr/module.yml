@@ -1,4 +1,0 @@
-name: zlet_storage
-build:
-  cmake: .
-  kconfig: Kconfig

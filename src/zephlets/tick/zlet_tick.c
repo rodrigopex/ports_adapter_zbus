@@ -24,13 +24,12 @@ K_TIMER_DEFINE(timer_zlet_tick, zlet_tick_timer_handler, NULL);
 static int zlet_tick_init(const struct zephlet *zephlet)
 {
 	struct zlet_tick_data *data = zephlet->data;
+
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		/* Initialize timer (already done by K_TIMER_DEFINE) */
-		if (ret == 0) {
-			data->status.is_ready = true;
-		}
+		data->status.is_ready = true;
 	}
 
 	return ret;
@@ -44,21 +43,29 @@ static int start(const struct zephlet *zephlet, const struct msg_api_context *co
 	int delay;
 
 	K_SPINLOCK(&data->lock) {
-		if (!data->status.is_ready) {
-			ret = -ENODEV;
-		} else if (data->status.is_running) {
-			ret = -EALREADY;
-		} else {
-			delay = data->config.delay_ms;
-			data->status.is_running = true;
-		}
 		status = data->status;
+		delay = data->config.delay_ms;
 	}
 
-	if (ret == 0) {
-		k_timer_start(&timer_zlet_tick, K_MSEC(delay), K_MSEC(delay));
-		LOG_DBG("Zephlet started with delay %d ms!", delay);
+	if (!status.is_ready) {
+		ret = -ENODEV;
+		goto cleanup;
 	}
+
+	if (status.is_running) {
+		ret = -EALREADY;
+		goto cleanup;
+	}
+
+	k_timer_start(&timer_zlet_tick, K_MSEC(delay), K_MSEC(delay));
+
+	K_SPINLOCK(&data->lock) {
+		data->status.is_running = true;
+	}
+
+	LOG_DBG("Zephlet started with delay %d ms!", delay);
+
+cleanup:
 
 	return zlet_tick_report_status(context, ret, &status, K_MSEC(250));
 }
@@ -99,7 +106,8 @@ static int get_status(const struct zephlet *zephlet, const struct msg_api_contex
 	return zlet_tick_report_status(context, ret, &status, K_MSEC(250));
 }
 
-static int config(const struct zephlet *zephlet, const struct msg_api_context *context, const struct msg_zlet_tick_config *new_config)
+static int config(const struct zephlet *zephlet, const struct msg_api_context *context,
+		  const struct msg_zlet_tick_config *new_config)
 {
 	struct zlet_tick_data *data = zephlet->data;
 	int ret = 0;
@@ -154,11 +162,9 @@ static struct zlet_tick_api api = {
 	.get_events = get_events,
 };
 
-static struct zlet_tick_data data = {
-	.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
-	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-	.events = MSG_ZLET_TICK_EVENTS_INIT_ZERO
-};
+static struct zlet_tick_data data = {.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
+				     .status = MSG_ZEPHLET_STATUS_INIT_ZERO,
+				     .events = MSG_ZLET_TICK_EVENTS_INIT_ZERO};
 
 int zlet_tick_init_fn(const struct zephlet *self)
 {

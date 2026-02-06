@@ -18,21 +18,6 @@ config DEBUG_ADAPTER
     default y
     depends on ZEPHLET_TICK && ZEPHLET_TAMPER_DETECTION
 
-config BATTERY_TO_STORAGE_ADAPTER
-	bool "From battery to storage zephlet adapter"
-	default y
-	depends on ZEPHLET_BATTERY && ZEPHLET_STORAGE
-
-config TICK_TO_STORAGE_ADAPTER
-	bool "From tick to storage zephlet adapter"
-	default y
-	depends on ZEPHLET_TICK && ZEPHLET_STORAGE
-
-config POSITION_TO_BATTERY_ADAPTER
-	bool "From position to battery zephlet adapter"
-	default y
-	depends on ZEPHLET_POSITION && ZEPHLET_BATTERY
-
 module = ADAPTERS
 module-str = adapter
 source "subsys/logging/Kconfig.template.log_config"

@@ -10,12 +10,8 @@ set_property(GLOBAL PROPERTY PROTO_FILES_LIST)
 
 set(EXTRA_ZEPHYR_MODULES
     "${CMAKE_SOURCE_DIR}/src/adapters"
-    # shared_zephlet now loaded via west.yml
     "${SERVICES_PATH}/ui"
     "${SERVICES_PATH}/tick"
-    "${SERVICES_PATH}/battery"
-    "${SERVICES_PATH}/storage"
-    "${SERVICES_PATH}/position"
 )
 message(WARNING "Extra Zephyr Modules Path: ${EXTRA_ZEPHYR_MODULES}")
 

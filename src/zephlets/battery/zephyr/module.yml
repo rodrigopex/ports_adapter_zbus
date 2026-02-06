@@ -1,4 +1,0 @@
-name: zlet_battery
-build:
-  cmake: .
-  kconfig: Kconfig
