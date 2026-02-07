@@ -19,6 +19,15 @@ void zlet_tick_timer_handler(struct k_timer *timer_id)
 
 K_TIMER_DEFINE(timer_zlet_tick, zlet_tick_timer_handler, NULL);
 
+#ifdef CONFIG_ZTEST
+static bool test_is_ready = true;
+
+void zlet_tick_test_set_ready(bool ready)
+{
+	test_is_ready = ready;
+}
+#endif
+
 /* Called by init_fn during SYS_INIT - sets is_ready on success */
 static int zlet_tick_init(const struct zephlet *zephlet)
 {
@@ -28,7 +37,11 @@ static int zlet_tick_init(const struct zephlet *zephlet)
 
 	K_SPINLOCK(&data->lock) {
 		/* Initialize timer (already done by K_TIMER_DEFINE) */
+#ifdef CONFIG_ZTEST
+		data->status.is_ready = test_is_ready;
+#else
 		data->status.is_ready = true;
+#endif
 	}
 
 	return ret;
@@ -60,6 +73,7 @@ static void start(const struct zephlet *zephlet, struct msg_api_context *context
 
 	K_SPINLOCK(&data->lock) {
 		data->status.is_running = true;
+		status = data->status;
 	}
 
 	LOG_DBG("Zephlet started with delay %d ms!", delay);
@@ -184,7 +198,7 @@ static struct zlet_tick_api api = {
 	.get_events = get_events,
 };
 
-static struct zlet_tick_data data = {.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
+static struct zlet_tick_data data = {.config = {.delay_ms = 1000},  /* Default 1s */
 				     .status = MSG_ZEPHLET_STATUS_INIT_ZERO,
 				     .events = MSG_ZLET_TICK_EVENTS_INIT_ZERO};
 

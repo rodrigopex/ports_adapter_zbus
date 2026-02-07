@@ -11,6 +11,15 @@ LOG_MODULE_DECLARE(zlet_ui, CONFIG_ZEPHLET_UI_LOG_LEVEL);
 /* Blink counter */
 static uint32_t blink_count;
 
+#ifdef CONFIG_ZTEST
+static bool test_is_ready = true;
+
+void zlet_ui_test_set_ready(bool ready)
+{
+	test_is_ready = ready;
+}
+#endif
+
 /* Called by init_fn during SYS_INIT - sets is_ready on success */
 static int zlet_ui_init(const struct zephlet *zephlet)
 {
@@ -20,7 +29,11 @@ static int zlet_ui_init(const struct zephlet *zephlet)
 	K_SPINLOCK(&data->lock) {
 		/* TODO: Initialize zephlet resources (one-time setup) */
 		if (ret == 0) {
+#ifdef CONFIG_ZTEST
+			data->status.is_ready = test_is_ready;
+#else
 			data->status.is_ready = true;
+#endif
 		}
 	}
 
