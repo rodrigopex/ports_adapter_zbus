@@ -1,18 +1,15 @@
-/* GENERATED FILE - DO NOT EDIT */
 /* Complete TODO items and remove this header when implementation is done */
 
 #include "zlet_ui_interface.h"
 
 #include "zlet_ui.h"
-#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zlet_ui, CONFIG_ZEPHLET_UI_LOG_LEVEL);
 
 /* Blink counter */
-static uint32_t blink_count = 0;
-static struct k_spinlock blink_lock;
+static uint32_t blink_count;
 
 /* Called by init_fn during SYS_INIT - sets is_ready on success */
 static int zlet_ui_init(const struct zephlet *zephlet)
@@ -80,23 +77,22 @@ static void get_status(const struct zephlet *zephlet, struct msg_api_context *co
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zephlet_status status;
-	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
 	}
 
 	if (context) {
-		context->return_code = ret;
+		context->return_code = 0;
 	}
 
 	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static void config(const struct zephlet *zephlet, struct msg_api_context *context, const struct msg_zlet_ui_config *config)
+static void config(const struct zephlet *zephlet, struct msg_api_context *context,
+		   const struct msg_zlet_ui_config *config)
 {
 	struct zlet_ui_data *data = zephlet->data;
-	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
@@ -104,7 +100,7 @@ static void config(const struct zephlet *zephlet, struct msg_api_context *contex
 	}
 
 	if (context) {
-		context->return_code = ret;
+		context->return_code = 0;
 	}
 
 	zlet_ui_report_config(context, config, K_MSEC(250));
@@ -114,14 +110,13 @@ static void get_config(const struct zephlet *zephlet, struct msg_api_context *co
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zlet_ui_config config;
-	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
 	}
 
 	if (context) {
-		context->return_code = ret;
+		context->return_code = 0;
 	}
 
 	zlet_ui_report_config(context, &config, K_MSEC(250));
@@ -132,14 +127,13 @@ static void get_events(const struct zephlet *zephlet, struct msg_api_context *co
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct msg_zlet_ui_events events;
-	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
 		events = data->events;
 	}
 
 	if (context) {
-		context->return_code = ret;
+		context->return_code = 0;
 	}
 
 	zlet_ui_report_events(context, &events, K_MSEC(250));
@@ -148,18 +142,21 @@ static void get_events(const struct zephlet *zephlet, struct msg_api_context *co
 /* RPC returns Empty - triggered by adapter (no direct response needed) */
 static void blink(const struct zephlet *zephlet, struct msg_api_context *context)
 {
-	struct msg_zlet_ui_events events = {0};
-	int ret = 0;
+	struct zlet_ui_data *data = zephlet->data;
 
-	K_SPINLOCK(&blink_lock) {
-		blink_count++;
-		events.blink = blink_count;
+	++blink_count;
+
+	struct msg_zlet_ui_events events = {
+		.has_blink = true, .blink = blink_count, .timestamp = k_uptime_get()};
+
+	K_SPINLOCK(&data->lock) {
+		data->events = events;
 	}
 
 	LOG_INF("LED blink #%u", events.blink);
 
 	if (context) {
-		context->return_code = ret;
+		context->return_code = 0;
 	}
 
 	/* Async event report (no context correlation) */
@@ -176,11 +173,9 @@ static struct zlet_ui_api api = {
 	.blink = blink,
 };
 
-static struct zlet_ui_data data = {
-	.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-	.config = MSG_ZLET_UI_CONFIG_INIT_ZERO,
-	.events = MSG_ZLET_UI_EVENTS_INIT_ZERO
-};
+static struct zlet_ui_data data = {.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
+				   .config = MSG_ZLET_UI_CONFIG_INIT_ZERO,
+				   .events = MSG_ZLET_UI_EVENTS_INIT_ZERO};
 
 int zlet_ui_init_fn(const struct zephlet *self)
 {

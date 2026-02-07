@@ -1,7 +1,6 @@
 #include "zlet_tick_interface.h"
 
 #include "zlet_tick.h"
-#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/zbus/zbus.h>
 #include <zephyr/logging/log.h>
@@ -49,12 +48,12 @@ static void start(const struct zephlet *zephlet, struct msg_api_context *context
 
 	if (!status.is_ready) {
 		ret = -ENODEV;
-		goto cleanup;
+		goto report;
 	}
 
 	if (status.is_running) {
 		ret = -EALREADY;
-		goto cleanup;
+		goto report;
 	}
 
 	k_timer_start(&timer_zlet_tick, K_MSEC(delay), K_MSEC(delay));
@@ -65,7 +64,7 @@ static void start(const struct zephlet *zephlet, struct msg_api_context *context
 
 	LOG_DBG("Zephlet started with delay %d ms!", delay);
 
-cleanup:
+report:
 	if (context) {
 		context->return_code = ret;
 	}
@@ -191,19 +190,17 @@ static struct zlet_tick_data data = {.config = MSG_ZLET_TICK_CONFIG_INIT_ZERO,
 
 int zlet_tick_init_fn(const struct zephlet *self)
 {
-	int err;
-
 	/* Initialize zephlet resources */
-	err = zlet_tick_init(self);
+	int ret = zlet_tick_init(self);
 
 	/* Register implementation */
-	if (err == 0) {
-		err = zlet_tick_set_implementation(self);
+	if (ret == 0) {
+		ret = zlet_tick_set_implementation(self);
 	}
 
-	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
+	printk("   -> %s %sinitialized\n", self->name, ret == 0 ? "" : "not ");
 
-	return err;
+	return ret;
 }
 
 ZEPHLET_DEFINE(zlet_tick, zlet_tick_init_fn, &api, &data);

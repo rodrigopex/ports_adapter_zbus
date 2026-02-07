@@ -11,11 +11,12 @@ message MsgZletUi {
   }
 
   message Events {
-    optional uint32 blink = 1;
+    int32 timestamp = 1;
+    optional uint32 blink = 2;
   }
 
   message Invoke {
-    optional MsgAPIContext context = 999;  /* For correlation tracking */
+    optional MsgAPIContext context = 999; /* For correlation tracking */
     oneof ui_invoke {
       Empty start = 1;
       Empty stop = 2;
@@ -28,7 +29,7 @@ message MsgZletUi {
   }
 
   message Report {
-    optional MsgAPIContext context = 999;  /* Present only for invoke responses */
+    optional MsgAPIContext context = 999; /* Present only for invoke responses */
     oneof ui_report {
       MsgZephletStatus status = 1;
       Config config = 2;
@@ -38,11 +39,11 @@ message MsgZletUi {
 }
 
 service UI {
-  rpc start (Empty) returns (MsgZephletStatus);
-  rpc stop (Empty) returns (MsgZephletStatus);
-  rpc get_status (Empty) returns (MsgZephletStatus);
-  rpc config (MsgZletUi.Config) returns (MsgZletUi.Config);
-  rpc get_config (Empty) returns (MsgZletUi.Config);
-  rpc get_events (Empty) returns (stream MsgZletUi.Events);
-  rpc blink (Empty) returns (Empty);
+  rpc start(Empty) returns (MsgZephletStatus);
+  rpc stop(Empty) returns (MsgZephletStatus);
+  rpc get_status(Empty) returns (MsgZephletStatus);
+  rpc config(MsgZletUi.Config) returns (MsgZletUi.Config);
+  rpc get_config(Empty) returns (MsgZletUi.Config);
+  rpc get_events(Empty) returns (stream MsgZletUi.Events);
+  rpc blink(Empty) returns (Empty);
 }
