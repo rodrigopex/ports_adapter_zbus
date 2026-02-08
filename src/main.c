@@ -11,14 +11,35 @@ int main(void)
 {
 	printk("Example project running on a %s board.\n", CONFIG_BOARD_TARGET);
 
-	// zlet_tamper_detection_start(0, K_FOREVER);
-	zlet_tick_config_set(0, 1000, K_FOREVER);
-	zlet_tick_start(0, K_FOREVER);
+	struct msg_zlet_tick_report *report = NULL;
+
+	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
+		zlet_tick_config_set(100, 1000, K_FOREVER);
+		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_CONFIG_TAG, K_MSEC(500));
+	}
+
+	if (report != NULL && report->has_context) {
+		printk("Context: id=%d, return code=%d\n", report->context.correlation_id,
+		       report->context.return_code);
+	}
+
+	report = NULL;
+
+	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
+		zlet_tick_start(200, K_FOREVER);
+		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_STATUS_TAG, K_MSEC(500));
+	}
+
+	if (report != NULL && report->has_context) {
+		printk("Context: id=%d, return code=%d\n", report->context.correlation_id,
+		       report->context.return_code);
+		printk("Main knows the zephlet tick is %srunning\n",
+		       report->status.is_running ? "" : "not ");
+	}
 
 	k_sleep(K_SECONDS(10));
 
 	zlet_tick_stop(0, K_FOREVER);
-	// zlet_tamper_detection_stop(K_FOREVER);
 
 	return 0;
 }

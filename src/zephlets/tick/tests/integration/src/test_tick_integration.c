@@ -241,3 +241,62 @@ ZTEST(tick_integration, test_timer_async_event)
 /* Test 11: Start when not ready returns -ENODEV */
 /* Note: This test requires manual initialization control which is not easily */
 /* testable in integration tests. Skipping for now - ENODEV path tested in unit tests */
+
+/* Test 12: wait_report receives correct report via OBSERVE_REPORT scope */
+ZTEST(tick_integration, test_wait_report)
+{
+	struct msg_zlet_tick_report *report = NULL;
+
+	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
+		zlet_tick_start(300, K_MSEC(100));
+		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_STATUS_TAG, K_SECONDS(1));
+	}
+
+	zassert_not_null(report, "Should receive status report");
+	zassert_true(report->has_context, "Should have context");
+	zassert_equal(report->context.correlation_id, 300, "Correlation ID");
+	zassert_equal(report->context.return_code, 0, "Expected success");
+	zassert_true(report->status.is_running, "Should be running");
+}
+
+/* Test 13: wait_report returns NULL on timeout */
+ZTEST(tick_integration, test_wait_report_timeout)
+{
+	struct msg_zlet_tick_report *report = NULL;
+
+	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
+		/* No invoke — should timeout */
+		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_STATUS_TAG, K_MSEC(200));
+	}
+
+	zassert_is_null(report, "Should timeout with NULL");
+}
+
+/* Test 14: wait_report filters by tag */
+ZTEST(tick_integration, test_wait_report_filter)
+{
+	struct msg_zlet_tick_report *report = NULL;
+
+	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
+		/* start produces STATUS report, but we wait for CONFIG */
+		zlet_tick_start(301, K_MSEC(100));
+		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_CONFIG_TAG, K_MSEC(500));
+	}
+
+	zassert_is_null(report, "Wrong tag should not match");
+}
+
+/* Test 15: wait_report with filter_tag=-1 accepts any report */
+ZTEST(tick_integration, test_wait_report_no_filter)
+{
+	struct msg_zlet_tick_report *report = NULL;
+
+	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
+		zlet_tick_start(302, K_MSEC(100));
+		report = zlet_tick_wait_report(-1, K_SECONDS(1));
+	}
+
+	zassert_not_null(report, "Should receive any report");
+	zassert_equal(report->which_tick_report, MSG_ZLET_TICK_REPORT_STATUS_TAG,
+		      "First report should be status");
+}
