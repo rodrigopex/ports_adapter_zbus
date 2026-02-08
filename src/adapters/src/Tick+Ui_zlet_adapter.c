@@ -13,22 +13,11 @@ static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
 
 	switch (tick_report->which_tick_report) {
 	case MSG_ZLET_TICK_REPORT_STATUS_TAG:
-		/* Check if this is a response (vs async event) */
-		if (tick_report->has_context) {
-			uint32_t correlation_id = tick_report->context.correlation_id;
-			int return_code = tick_report->context.return_code;
+		LOG_DBG("Received Tick status. Discarding");
+		break;
 
-			if (return_code < 0) {
-				LOG_WRN("tick status failed: %d", return_code);
-			} else {
-				LOG_DBG("tick status success (corr_id=%u, running=%d, ready=%d)",
-					correlation_id,
-					tick_report->status.is_running,
-					tick_report->status.is_ready);
-			}
-		} else {
-			LOG_DBG("Async status event from tick");
-		}
+	case MSG_ZLET_TICK_REPORT_CONFIG_TAG:
+		LOG_DBG("Received Tick config. Discarding");
 		break;
 
 	case MSG_ZLET_TICK_REPORT_EVENTS_TAG:
@@ -42,6 +31,7 @@ static void tick_to_ui_adapter(const struct zbus_channel *chan, const void *msg)
 		break;
 
 	default:
+		LOG_WRN("Received unexpected Tick report type");
 		break;
 	}
 }
