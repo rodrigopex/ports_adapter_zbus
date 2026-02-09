@@ -36,7 +36,7 @@
 
 ### Application Zephlets
 
-**All zephlets use context API** (correlation_id, return_code, has_context flag). **Proto field validation** enforces reserved ranges at build time.
+**All zephlets use context API** (correlation_id, return_code, has_context flag). **Proto field validation** enforces reserved ranges at build time. **nanopb options:** `anonymous_oneof = true` + `long_names = false` (shorter C symbols).
 
 - **tick** (REFERENCE): Full implementation - init sets is_ready, start/stop controls is_running, timer uses _async(), context threading
 - **ui**: Blink command, demonstrates simple context API usage
