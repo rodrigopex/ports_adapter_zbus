@@ -4,15 +4,23 @@ import "nanopb.proto";
 import "zephlet.proto";
 
 option (nanopb_fileopt).anonymous_oneof = true;
+option (nanopb_fileopt).long_names = false;
 
 message MsgZletUi {
   message Config {
-    // No configuration needed yet
+    int32 user_button_long_press_duration = 1;
   }
 
+  enum UserButtonEvents {
+    USER_BUTTON_EVENT_NONE = 0;
+    USER_BUTTON_EVENT_PRESSED = 1;
+    USER_BUTTON_EVENT_RELEASED = 2;
+    USER_BUTTON_EVENT_LONG_PRESSED = 3;
+  }
   message Events {
     int32 timestamp = 1;
     optional uint32 blink = 2;
+    optional UserButtonEvents user_button_event = 3;
   }
 
   message Invoke {

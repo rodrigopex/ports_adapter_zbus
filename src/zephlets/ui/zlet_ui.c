@@ -109,6 +109,7 @@ static void config(const struct zephlet *zephlet, struct msg_api_context *contex
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
+
 		/* TODO: Apply configuration changes to zephlet resources */
 	}
 
