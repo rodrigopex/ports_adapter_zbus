@@ -9,8 +9,8 @@
 
 /* Counter for callbacks */
 static int report_count = 0;
-static struct msg_zlet_tick_report last_report;
-static struct msg_api_context last_context;
+static struct tick_report last_report;
+static struct zephlet_context last_context;
 static bool last_has_context;
 
 K_SEM_DEFINE(report_sem, 0, 10);
@@ -18,7 +18,7 @@ K_SEM_DEFINE(report_sem, 0, 10);
 /* Real listener - no mocking! */
 static void tick_report_listener(const struct zbus_channel *chan)
 {
-	const struct msg_zlet_tick_report *msg = zbus_chan_const_msg(chan);
+	const struct tick_report *msg = zbus_chan_const_msg(chan);
 
 	if (chan == &chan_zlet_tick_report) {
 		memcpy(&last_report, msg, sizeof(last_report));
@@ -60,7 +60,7 @@ ZTEST(tick_integration, test_start)
 	/* Wait for listener callback */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No status report received");
 
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_STATUS_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_STATUS_TAG,
 		      "Expected status report");
 	zassert_true(last_report.status.is_running, "Tick should be running");
 	zassert_equal(report_count, 1, "Expected 1 report");
@@ -75,7 +75,7 @@ ZTEST(tick_integration, test_config_set)
 	zlet_tick_config_set(124, 2000, K_MSEC(100));
 
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report received");
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_CONFIG_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_CONFIG_TAG,
 		      "Expected config report");
 	zassert_equal(last_report.config.delay_ms, 2000, "Config delay mismatch");
 	zassert_true(last_has_context, "Should have context");
@@ -96,7 +96,7 @@ ZTEST(tick_integration, test_config_get)
 	/* Get config */
 	zlet_tick_get_config(125, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report from get");
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_CONFIG_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_CONFIG_TAG,
 		      "Expected config report");
 	zassert_equal(last_report.config.delay_ms, 3000, "Config delay mismatch");
 	zassert_true(last_has_context, "Should have context");
@@ -120,7 +120,7 @@ ZTEST(tick_integration, test_timer_fires)
 
 	/* Wait for timer event */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(2)), "Timer should fire");
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_EVENTS_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_true(last_report.events.has_tick, "Should have tick event");
 	zassert_true(last_report.events.timestamp > 0, "Timestamp should be set");
@@ -136,7 +136,7 @@ ZTEST(tick_integration, test_stop)
 	/* Stop timer */
 	zlet_tick_stop(127, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_STATUS_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_STATUS_TAG,
 		      "Expected status report");
 	zassert_false(last_report.status.is_running, "Tick should be stopped");
 	zassert_true(last_has_context, "Should have context");
@@ -157,7 +157,7 @@ ZTEST(tick_integration, test_get_status)
 	/* Get status */
 	zlet_tick_get_status(128, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No status from get");
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_STATUS_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_STATUS_TAG,
 		      "Expected status report");
 	zassert_true(last_report.status.is_running, "Should be running");
 	zassert_true(last_has_context, "Should have context");
@@ -233,7 +233,7 @@ ZTEST(tick_integration, test_timer_async_event)
 
 	/* Wait for timer event - async event should have has_context=false */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(2)), "Timer should fire");
-	zassert_equal(last_report.which_tick_report, MSG_ZLET_TICK_REPORT_EVENTS_TAG,
+	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_false(last_has_context, "Async events should not have context");
 }
@@ -245,11 +245,11 @@ ZTEST(tick_integration, test_timer_async_event)
 /* Test 12: wait_report receives correct report via OBSERVE_REPORT scope */
 ZTEST(tick_integration, test_wait_report)
 {
-	struct msg_zlet_tick_report *report = NULL;
+	struct tick_report *report = NULL;
 
 	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
 		zlet_tick_start(300, K_MSEC(100));
-		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_STATUS_TAG, K_SECONDS(1));
+		report = zlet_tick_wait_report(TICK_REPORT_STATUS_TAG, K_SECONDS(1));
 	}
 
 	zassert_not_null(report, "Should receive status report");
@@ -262,11 +262,11 @@ ZTEST(tick_integration, test_wait_report)
 /* Test 13: wait_report returns NULL on timeout */
 ZTEST(tick_integration, test_wait_report_timeout)
 {
-	struct msg_zlet_tick_report *report = NULL;
+	struct tick_report *report = NULL;
 
 	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
 		/* No invoke — should timeout */
-		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_STATUS_TAG, K_MSEC(200));
+		report = zlet_tick_wait_report(TICK_REPORT_STATUS_TAG, K_MSEC(200));
 	}
 
 	zassert_is_null(report, "Should timeout with NULL");
@@ -275,12 +275,12 @@ ZTEST(tick_integration, test_wait_report_timeout)
 /* Test 14: wait_report filters by tag */
 ZTEST(tick_integration, test_wait_report_filter)
 {
-	struct msg_zlet_tick_report *report = NULL;
+	struct tick_report *report = NULL;
 
 	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
 		/* start produces STATUS report, but we wait for CONFIG */
 		zlet_tick_start(301, K_MSEC(100));
-		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_CONFIG_TAG, K_MSEC(500));
+		report = zlet_tick_wait_report(TICK_REPORT_CONFIG_TAG, K_MSEC(500));
 	}
 
 	zassert_is_null(report, "Wrong tag should not match");
@@ -289,7 +289,7 @@ ZTEST(tick_integration, test_wait_report_filter)
 /* Test 15: wait_report with filter_tag=-1 accepts any report */
 ZTEST(tick_integration, test_wait_report_no_filter)
 {
-	struct msg_zlet_tick_report *report = NULL;
+	struct tick_report *report = NULL;
 
 	ZEPHLET_OBSERVE_REPORT(zlet_tick) {
 		zlet_tick_start(302, K_MSEC(100));
@@ -297,6 +297,6 @@ ZTEST(tick_integration, test_wait_report_no_filter)
 	}
 
 	zassert_not_null(report, "Should receive any report");
-	zassert_equal(report->which_tick_report, MSG_ZLET_TICK_REPORT_STATUS_TAG,
+	zassert_equal(report->which_tick_report_tag, TICK_REPORT_STATUS_TAG,
 		      "First report should be status");
 }

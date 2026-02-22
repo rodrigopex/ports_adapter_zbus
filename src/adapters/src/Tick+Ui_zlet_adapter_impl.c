@@ -12,21 +12,18 @@
 
 LOG_MODULE_DECLARE(adapter, CONFIG_ADAPTERS_LOG_LEVEL);
 
-void tick_to_ui_on_report_events(
-	const struct zbus_channel *chan,
-	const struct msg_zlet_tick_report *report)
+void tick_to_ui_on_report_events(const struct zbus_channel *chan,
+				 const struct tick_report *report)
 {
 	if (report->events.has_tick) {
-		LOG_DBG("Received Tick event at %d, invoking UI blink",
-			report->events.timestamp);
+		LOG_DBG("Received Tick event at %d, invoking UI blink", report->events.timestamp);
 		zlet_ui_blink(0, K_NO_WAIT);
 	}
 }
 
-void tick_to_ui_on_report_status(
-	const struct zbus_channel *chan,
-	const struct msg_zlet_tick_report *report)
+void tick_to_ui_on_report_status(const struct zbus_channel *chan,
+				 const struct tick_report *report)
 {
-	LOG_DBG("Tick status: running=%d, ready=%d",
-		report->status.is_running, report->status.is_ready);
+	LOG_DBG("Tick status: running=%d, ready=%d", report->status.is_running,
+		report->status.is_ready);
 }

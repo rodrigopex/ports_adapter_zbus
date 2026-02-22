@@ -9,8 +9,8 @@
 
 /* Counter for callbacks */
 static int report_count = 0;
-static struct msg_zlet_ui_report last_report;
-static struct msg_api_context last_context;
+static struct ui_report last_report;
+static struct zephlet_context last_context;
 static bool last_has_context;
 
 K_SEM_DEFINE(report_sem, 0, 10);
@@ -18,7 +18,7 @@ K_SEM_DEFINE(report_sem, 0, 10);
 /* Real async listener - no mocking! */
 static void ui_report_listener(const struct zbus_channel *chan)
 {
-	const struct msg_zlet_ui_report *msg = zbus_chan_const_msg(chan);
+	const struct ui_report *msg = zbus_chan_const_msg(chan);
 
 	if (chan == &chan_zlet_ui_report) {
 		memcpy(&last_report, msg, sizeof(last_report));
@@ -60,7 +60,7 @@ ZTEST(ui_integration, test_start)
 	/* Wait for listener callback */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No status report received");
 
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_STATUS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_STATUS_TAG,
 		      "Expected status report");
 	zassert_true(last_report.status.is_running, "ui should be running");
 	zassert_equal(report_count, 1, "Expected 1 report");
@@ -79,7 +79,7 @@ ZTEST(ui_integration, test_stop)
 	/* Stop zephlet */
 	zlet_ui_stop(301, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_STATUS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_STATUS_TAG,
 		      "Expected status report");
 	zassert_false(last_report.status.is_running, "ui should be stopped");
 	zassert_true(last_has_context, "Should have context");
@@ -100,7 +100,7 @@ ZTEST(ui_integration, test_get_status)
 	/* Get status */
 	zlet_ui_get_status(302, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No status from get");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_STATUS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_STATUS_TAG,
 		      "Expected status report");
 	zassert_true(last_report.status.is_running, "Should be running");
 	zassert_true(last_has_context, "Should have context");
@@ -113,14 +113,14 @@ ZTEST(ui_integration, test_get_status)
 /*
 ZTEST(ui_integration, test_config_set)
 {
-	struct msg_zlet_ui_config cfg = {
+	struct ui_config cfg = {
 		// Fill in config field values here
 	};
 
 	zlet_ui_config(&cfg, K_MSEC(100));
 
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report received");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_CONFIG_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_CONFIG_TAG,
 		      "Expected config report");
 	// Add assertions for specific config fields
 }
@@ -131,7 +131,7 @@ ZTEST(ui_integration, test_config_set)
 /*
 ZTEST(ui_integration, test_config_get)
 {
-	struct msg_zlet_ui_config cfg = {
+	struct ui_config cfg = {
 		// Fill in config field values here
 	};
 
@@ -145,7 +145,7 @@ ZTEST(ui_integration, test_config_get)
 	// Get config
 	zlet_ui_get_config(K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report from get");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_CONFIG_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_CONFIG_TAG,
 		      "Expected config report");
 	// Add assertions for specific config fields
 }
@@ -182,7 +182,7 @@ ZTEST(ui_integration, test_blink)
 	/* Wait for initial events */
 	zlet_ui_get_events(0, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No initial events report");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_equal(last_report.events.blink, 0, "Initial blink count should be 0");
 
@@ -191,7 +191,7 @@ ZTEST(ui_integration, test_blink)
 
 	/* Wait for events report - async so no context */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No blink events report");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_equal(last_report.events.blink, 1, "Blink count should be 1");
 	zassert_false(last_has_context, "Blink uses async reporting - no context");
@@ -199,7 +199,7 @@ ZTEST(ui_integration, test_blink)
 	/* Call again */
 	zlet_ui_blink(0, K_MSEC(100));
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No second blink events report");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_equal(last_report.events.blink, 2, "Blink count should be 2");
 	zassert_false(last_has_context, "Blink uses async reporting - no context");
@@ -236,7 +236,7 @@ ZTEST(ui_integration, test_blink_async_event)
 
 	/* Wait for events report - async event should have has_context=false */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No blink events report");
-	zassert_equal(last_report.which_ui_report, MSG_ZLET_UI_REPORT_EVENTS_TAG,
+	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
 		      "Expected events report");
 	zassert_false(last_has_context, "Async events should not have context");
 }

@@ -1,11 +1,16 @@
 if(CONFIG_ZEPHLET_TICK)
-    # Register proto for nanopb
-    set_property(GLOBAL APPEND PROPERTY PROTO_FILES_LIST
+    # Generate full proto from schema + base proto → build dir
+    zephyr_zephlet_generate_proto(zlet_tick
+        "${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet.proto"
         "${ZEPHYR_ZLET_TICK_MODULE_DIR}/zlet_tick.proto")
 
-    # Auto-generate zephlet infrastructure to build directory
-    zephyr_zephlet_generate(zlet_tick
-        "${ZEPHYR_ZLET_TICK_MODULE_DIR}/zlet_tick.proto")
+    # Register generated proto for nanopb
+    set_property(GLOBAL APPEND PROPERTY PROTO_FILES_LIST
+        "${zlet_tick_GENERATED_PROTO}")
+
+    # Auto-generate zephlet infrastructure from generated proto
+    zephyr_zephlet_generate(zlet_tick "${zlet_tick_GENERATED_PROTO}")
+    add_dependencies(zlet_tick_codegen zlet_tick_proto_gen)
 
     # Expose build directory globally for zephlet headers
     zephyr_include_directories("${CMAKE_CURRENT_BINARY_DIR}")

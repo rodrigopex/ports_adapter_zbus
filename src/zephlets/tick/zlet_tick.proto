@@ -6,7 +6,7 @@ import "zephlet.proto";
 option (nanopb_fileopt).anonymous_oneof = true;
 option (nanopb_fileopt).long_names = false;
 
-message MsgZletTick {
+message Tick {
   message Config {
     uint32 delay_ms = 1;
   }
@@ -15,37 +15,8 @@ message MsgZletTick {
     int32 timestamp = 1;
     optional Empty tick = 2;
   }
-
-  message Invoke {
-    optional MsgAPIContext context = 999;  /* For correlation tracking */
-    oneof tick_invoke {
-      Empty start = 1;
-      Empty stop = 2;
-      Empty get_status = 3;
-      Config config = 4;
-      Empty get_config = 5;
-      Empty get_events = 6;
-      // Custom commands start at 7+
-    }
-  }
-
-  message Report {
-    optional MsgAPIContext context = 999;  /* Present only for invoke responses */
-    oneof tick_report {
-      MsgZephletStatus status = 1;
-      Config config = 2;
-      Events events = 3;
-      // Custom reports start at 4+
-    }
-  }
 }
 
 service Tick {
-  rpc start(Empty) returns (MsgZephletStatus);
-  rpc stop(Empty) returns (MsgZephletStatus);
-  rpc get_status(Empty) returns (MsgZephletStatus);
-  rpc config(MsgZletTick.Config) returns (MsgZletTick.Config);
-  rpc get_config(Empty) returns (MsgZletTick.Config);
-  rpc get_events(Empty) returns (stream MsgZletTick.Events);
-  // Custom RPCs below
+  option (zephlet.extends_base) = true;
 }

@@ -40,10 +40,10 @@ static int zlet_ui_init(const struct zephlet *zephlet)
 	return ret;
 }
 
-static void start(const struct zephlet *zephlet, struct msg_api_context *context)
+static void start(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
-	struct msg_zephlet_status status;
+	struct zephlet_status status;
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
@@ -64,10 +64,10 @@ static void start(const struct zephlet *zephlet, struct msg_api_context *context
 	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static void stop(const struct zephlet *zephlet, struct msg_api_context *context)
+static void stop(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
-	struct msg_zephlet_status status;
+	struct zephlet_status status;
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
@@ -86,10 +86,10 @@ static void stop(const struct zephlet *zephlet, struct msg_api_context *context)
 	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static void get_status(const struct zephlet *zephlet, struct msg_api_context *context)
+static void get_status(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
-	struct msg_zephlet_status status;
+	struct zephlet_status status;
 
 	K_SPINLOCK(&data->lock) {
 		status = data->status;
@@ -102,8 +102,8 @@ static void get_status(const struct zephlet *zephlet, struct msg_api_context *co
 	zlet_ui_report_status(context, &status, K_MSEC(250));
 }
 
-static void config(const struct zephlet *zephlet, struct msg_api_context *context,
-		   const struct msg_zlet_ui_config *config)
+static void config(const struct zephlet *zephlet, struct zephlet_context *context,
+		   const struct ui_config *config)
 {
 	struct zlet_ui_data *data = zephlet->data;
 
@@ -120,10 +120,10 @@ static void config(const struct zephlet *zephlet, struct msg_api_context *contex
 	zlet_ui_report_config(context, config, K_MSEC(250));
 }
 
-static void get_config(const struct zephlet *zephlet, struct msg_api_context *context)
+static void get_config(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
-	struct msg_zlet_ui_config config;
+	struct ui_config config;
 
 	K_SPINLOCK(&data->lock) {
 		config = data->config;
@@ -136,11 +136,11 @@ static void get_config(const struct zephlet *zephlet, struct msg_api_context *co
 	zlet_ui_report_config(context, &config, K_MSEC(250));
 }
 
-/* RPC returns MsgZletUi.Events - publish to report field: events */
-static void get_events(const struct zephlet *zephlet, struct msg_api_context *context)
+/* RPC returns Ui.Events - publish to report field: events */
+static void get_events(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
-	struct msg_zlet_ui_events events;
+	struct ui_events events;
 
 	K_SPINLOCK(&data->lock) {
 		events = data->events;
@@ -154,13 +154,13 @@ static void get_events(const struct zephlet *zephlet, struct msg_api_context *co
 }
 
 /* RPC returns Empty - triggered by adapter (no direct response needed) */
-static void blink(const struct zephlet *zephlet, struct msg_api_context *context)
+static void blink(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 
 	++blink_count;
 
-	struct msg_zlet_ui_events events = {
+	struct ui_events events = {
 		.has_blink = true, .blink = blink_count, .timestamp = k_uptime_get()};
 
 	K_SPINLOCK(&data->lock) {
@@ -187,9 +187,9 @@ static struct zlet_ui_api api = {
 	.blink = blink,
 };
 
-static struct zlet_ui_data data = {.status = MSG_ZEPHLET_STATUS_INIT_ZERO,
-				   .config = MSG_ZLET_UI_CONFIG_INIT_ZERO,
-				   .events = MSG_ZLET_UI_EVENTS_INIT_ZERO};
+static struct zlet_ui_data data = {.status = ZEPHLET_STATUS_INIT_ZERO,
+				   .config = UI_CONFIG_INIT_ZERO,
+				   .events = UI_EVENTS_INIT_ZERO};
 
 int zlet_ui_init_fn(const struct zephlet *self)
 {

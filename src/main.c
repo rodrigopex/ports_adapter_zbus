@@ -12,12 +12,12 @@ int main(void)
 {
 	printk("Example project running on a %s board.\n", CONFIG_BOARD_TARGET);
 
-	struct msg_zlet_tick_report *report = NULL;
+	struct tick_report *report = NULL;
 
 	ZEPHLET_OBSERVE_REPORT(zlet_tick)
 	{
 		zlet_tick_config_set(100, 1000, K_FOREVER);
-		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_CONFIG_TAG, K_MSEC(500));
+		report = zlet_tick_wait_report(TICK_REPORT_CONFIG_TAG, K_MSEC(500));
 	}
 
 	if (report != NULL && report->has_context) {
@@ -30,7 +30,7 @@ int main(void)
 	ZEPHLET_OBSERVE_REPORT(zlet_tick)
 	{
 		zlet_tick_start(200, K_FOREVER);
-		report = zlet_tick_wait_report(MSG_ZLET_TICK_REPORT_STATUS_TAG, K_MSEC(500));
+		report = zlet_tick_wait_report(TICK_REPORT_STATUS_TAG, K_MSEC(500));
 	}
 
 	if (report != NULL && report->has_context) {
@@ -45,8 +45,8 @@ int main(void)
 	ZEPHLET_OBSERVE_REPORT(zlet_ui)
 	{
 		zlet_ui_config_set(100, 1000, K_FOREVER);
-		struct msg_zlet_ui_report *ui_report =
-			zlet_ui_wait_report(MSG_ZLET_UI_REPORT_CONFIG_TAG, K_MSEC(500));
+		struct ui_report *ui_report =
+			zlet_ui_wait_report(UI_REPORT_CONFIG_TAG, K_MSEC(500));
 		if (ui_report != NULL && ui_report->has_context) {
 			printk("Context: id=%d, return code=%d\n",
 			       ui_report->context.correlation_id, ui_report->context.return_code);

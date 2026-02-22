@@ -6,9 +6,12 @@ import "zephlet.proto";
 option (nanopb_fileopt).anonymous_oneof = true;
 option (nanopb_fileopt).long_names = false;
 
-message MsgZletUi {
-  message Config {
-    int32 user_button_long_press_duration = 1;
+message Ui {
+  enum BuzzerTone {
+    BUZZER_TONE_1 = 0;
+    BUZZER_TONE_2 = 1;
+    BUZZER_TONE_3 = 2;
+    BUZZER_TONE_4 = 3;
   }
 
   enum UserButtonEvents {
@@ -17,41 +20,27 @@ message MsgZletUi {
     USER_BUTTON_EVENT_RELEASED = 2;
     USER_BUTTON_EVENT_LONG_PRESSED = 3;
   }
+
+  message Config {
+    int32 user_button_long_press_duration = 1;
+  }
+
   message Events {
     int32 timestamp = 1;
     optional uint32 blink = 2;
     optional UserButtonEvents user_button_event = 3;
   }
-
-  message Invoke {
-    optional MsgAPIContext context = 999; /* For correlation tracking */
-    oneof ui_invoke {
-      Empty start = 1;
-      Empty stop = 2;
-      Empty get_status = 3;
-      Config config = 4;
-      Empty get_config = 5;
-      Empty get_events = 6;
-      Empty blink = 7;
-    }
-  }
-
-  message Report {
-    optional MsgAPIContext context = 999; /* Present only for invoke responses */
-    oneof ui_report {
-      MsgZephletStatus status = 1;
-      Config config = 2;
-      Events events = 3;
-    }
-  }
 }
 
 service UI {
-  rpc start(Empty) returns (MsgZephletStatus);
-  rpc stop(Empty) returns (MsgZephletStatus);
-  rpc get_status(Empty) returns (MsgZephletStatus);
-  rpc config(MsgZletUi.Config) returns (MsgZletUi.Config);
-  rpc get_config(Empty) returns (MsgZletUi.Config);
-  rpc get_events(Empty) returns (stream MsgZletUi.Events);
+  option (zephlet.extends_base) = true; /* Extends base zlet */
+  // The following RPCs are going to be generated in this zlet proto
+  // rpc start(Empty) returns (MsgZephletStatus);
+  // rpc stop(Empty) returns (MsgZephletStatus);
+  // rpc get_status(Empty) returns (MsgZephletStatus);
+  // rpc config(MsgZletUi.Config) returns (Ui.Config);
+  // rpc get_config(Empty) returns (Ui.Config);
+  // rpc get_events(Empty) returns (stream Ui.Events);
   rpc blink(Empty) returns (Empty);
+  rpc buzzer_play(Ui.BuzzerTone) returns (Empty);
 }
