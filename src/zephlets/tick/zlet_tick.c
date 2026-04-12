@@ -13,7 +13,7 @@ void zlet_tick_timer_handler(struct k_timer *timer_id)
 
 	struct tick_events events = {.timestamp = k_uptime_get(), .has_tick = true};
 
-	/* Async event - no context */
+	/* Async event - no result */
 	zlet_tick_report_events_async(&events, K_NO_WAIT);
 }
 
@@ -47,49 +47,40 @@ static int zlet_tick_init(const struct zephlet *zephlet)
 	return ret;
 }
 
-static void start(const struct zephlet *zephlet, struct zephlet_context *context)
+static int start(struct zlet_tick_context *ctx)
 {
-	struct zlet_tick_data *data = zephlet->data;
-	struct zephlet_status status;
+	struct zlet_tick_data *data = ctx->zephlet->data;
 	int delay;
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
-		status = data->status;
-		delay = data->config.delay_ms;
+		if (!data->status.is_ready) {
+			ret = -ENODEV;
+		} else if (data->status.is_running) {
+			ret = -EALREADY;
+		} else {
+			delay = data->config.delay_ms;
+		}
+		ctx->response.status = data->status;
 	}
 
-	if (!status.is_ready) {
-		ret = -ENODEV;
-		goto report;
+	if (ret == 0) {
+		k_timer_start(&timer_zlet_tick, K_MSEC(delay), K_MSEC(delay));
+
+		K_SPINLOCK(&data->lock) {
+			data->status.is_running = true;
+			ctx->response.status = data->status;
+		}
+
+		LOG_DBG("Zephlet started with delay %d ms!", delay);
 	}
 
-	if (status.is_running) {
-		ret = -EALREADY;
-		goto report;
-	}
-
-	k_timer_start(&timer_zlet_tick, K_MSEC(delay), K_MSEC(delay));
-
-	K_SPINLOCK(&data->lock) {
-		data->status.is_running = true;
-		status = data->status;
-	}
-
-	LOG_DBG("Zephlet started with delay %d ms!", delay);
-
-report:
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_tick_report_status(context, &status, K_MSEC(250));
+	return ret;
 }
 
-static void stop(const struct zephlet *zephlet, struct zephlet_context *context)
+static int stop(struct zlet_tick_context *ctx)
 {
-	struct zlet_tick_data *data = zephlet->data;
-	struct zephlet_status status;
+	struct zlet_tick_data *data = ctx->zephlet->data;
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
@@ -98,7 +89,7 @@ static void stop(const struct zephlet *zephlet, struct zephlet_context *context)
 		} else {
 			data->status.is_running = false;
 		}
-		status = data->status;
+		ctx->response.status = data->status;
 	}
 
 	if (ret == 0) {
@@ -106,87 +97,58 @@ static void stop(const struct zephlet *zephlet, struct zephlet_context *context)
 		LOG_DBG("Zephlet stopped!");
 	}
 
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_tick_report_status(context, &status, K_MSEC(250));
+	return ret;
 }
 
-static void get_status(const struct zephlet *zephlet, struct zephlet_context *context)
+static int get_status(struct zlet_tick_context *ctx)
 {
-	struct zlet_tick_data *data = zephlet->data;
-	struct zephlet_status status;
-	int ret = 0;
+	struct zlet_tick_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		status = data->status;
+		ctx->response.status = data->status;
 	}
 
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_tick_report_status(context, &status, K_MSEC(250));
+	return 0;
 }
 
-static void config(const struct zephlet *zephlet, struct zephlet_context *context,
-		   const struct tick_config *new_config)
+static int config(struct zlet_tick_context *ctx, const struct tick_config *new_config)
 {
-	struct zlet_tick_data *data = zephlet->data;
-	int ret = 0;
+	struct zlet_tick_data *data = ctx->zephlet->data;
 
 	/* Validate config */
 	if (new_config->delay_ms == 0) {
-		ret = -EINVAL;
-		goto report;
+		return -EINVAL;
 	}
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *new_config;
 	}
 
-report:
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_tick_report_config(context, new_config, K_MSEC(250));
+	ctx->response.config = *new_config;
+	return 0;
 }
 
-static void get_config(const struct zephlet *zephlet, struct zephlet_context *context)
+static int get_config(struct zlet_tick_context *ctx)
 {
-	struct zlet_tick_data *data = zephlet->data;
-	struct tick_config config;
-	int ret = 0;
+	struct zlet_tick_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		config = data->config;
+		ctx->response.config = data->config;
 	}
 
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_tick_report_config(context, &config, K_MSEC(250));
+	return 0;
 }
 
 /* RPC returns Tick.Events - publish to report field: events */
-static void get_last_event(const struct zephlet *zephlet, struct zephlet_context *context)
+static int get_last_event(struct zlet_tick_context *ctx)
 {
-	struct zlet_tick_data *data = zephlet->data;
-	struct tick_events events;
-	int ret = 0;
+	struct zlet_tick_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		events = data->events;
+		ctx->response.events = data->events;
 	}
 
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_tick_report_events(context, &events, K_MSEC(250));
+	return 0;
 }
 
 static struct zlet_tick_api api = {

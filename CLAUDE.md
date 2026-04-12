@@ -36,14 +36,14 @@
 
 ### Application Zephlets
 
-**All zephlets use context API** (correlation_id, return_code, has_context flag). **Proto field validation** enforces reserved ranges at build time. **nanopb options:** `anonymous_oneof = true` + `long_names = false` (shorter C symbols).
+**All zephlets use result API** (correlation_id, return_code, has_result flag). API functions return int, fill `ctx->response`. Interface handles publishing. **Proto field validation** enforces reserved ranges at build time. **nanopb options:** `anonymous_oneof = true` + `long_names = false` (shorter C symbols).
 
-- **tick** (REFERENCE): Full implementation - init sets is_ready, start/stop controls is_running, timer uses _async(), context threading
-- **ui**: Blink command, demonstrates simple context API usage
+- **tick** (REFERENCE): Full implementation - init sets is_ready, start/stop controls is_running, timer uses _async(), `<zephlet>_context` pattern
+- **ui**: Blink command, demonstrates async events + context pattern
 
 ### Application Adapters
 
-**Reference:** `Tick+Ui_zlet_adapter.c` - listens tick reports, checks has_context flag, extracts correlation_id/return_code, distinguishes responses from async events.
+**Reference:** `Tick+Ui_zlet_adapter.c` - listens tick reports, checks has_result flag, extracts correlation_id/return_code, distinguishes responses from async events.
 **base_adapter.c:** Registers shared logging module for all adapters.
 
 ## Configuration

@@ -10,10 +10,12 @@
 /* Counter for callbacks */
 static int report_count = 0;
 static struct tick_report last_report;
-static struct zephlet_context last_context;
-static bool last_has_context;
+static struct tick_report last_async_report;
+static struct zephlet_result last_result;
+static bool last_has_result;
 
 K_SEM_DEFINE(report_sem, 0, 10);
+K_SEM_DEFINE(async_report_sem, 0, 10);
 
 /* Real listener - no mocking! */
 static void tick_report_listener(const struct zbus_channel *chan)
@@ -22,9 +24,12 @@ static void tick_report_listener(const struct zbus_channel *chan)
 
 	if (chan == &chan_zlet_tick_report) {
 		memcpy(&last_report, msg, sizeof(last_report));
-		last_has_context = msg->has_context;
-		if (msg->has_context) {
-			last_context = msg->context;
+		last_has_result = msg->has_result;
+		if (msg->has_result) {
+			last_result = msg->result;
+		} else {
+			memcpy(&last_async_report, msg, sizeof(last_async_report));
+			k_sem_give(&async_report_sem);
 		}
 		report_count++;
 		k_sem_give(&report_sem);
@@ -45,9 +50,11 @@ static void reset(void *fixture)
 
 	report_count = 0;
 	memset(&last_report, 0, sizeof(last_report));
-	memset(&last_context, 0, sizeof(last_context));
-	last_has_context = false;
+	memset(&last_async_report, 0, sizeof(last_async_report));
+	memset(&last_result, 0, sizeof(last_result));
+	last_has_result = false;
 	k_sem_reset(&report_sem);
+	k_sem_reset(&async_report_sem);
 }
 
 ZTEST_SUITE(tick_integration, NULL, NULL, reset, NULL, NULL);
@@ -93,12 +100,12 @@ ZTEST(tick_integration, test_timer_fires)
 	struct tick_report report = zlet_tick_start(K_SECONDS(1));
 	zassert_true(ZEPHLET_CALL_OK(report), "Start should succeed");
 
-	/* Wait for timer event via listener */
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(2)), "Timer should fire");
-	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_EVENTS_TAG,
+	/* Wait for timer event via async listener */
+	zassert_ok(k_sem_take(&async_report_sem, K_SECONDS(2)), "Timer should fire");
+	zassert_equal(last_async_report.which_tick_report_tag, TICK_REPORT_EVENTS_TAG,
 		      "Expected events report");
-	zassert_true(last_report.events.has_tick, "Should have tick event");
-	zassert_true(last_report.events.timestamp > 0, "Timestamp should be set");
+	zassert_true(last_async_report.events.has_tick, "Should have tick event");
+	zassert_true(last_async_report.events.timestamp > 0, "Timestamp should be set");
 }
 
 /* Test 5: Blocking stop stops timer */
@@ -154,8 +161,8 @@ ZTEST(tick_integration, test_start_already_running)
 
 	/* Try to start again */
 	report = zlet_tick_start(K_SECONDS(1));
-	zassert_true(report.has_context, "Should have context");
-	zassert_equal(report.context.return_code, -EALREADY, "Expected -EALREADY");
+	zassert_true(report.has_result, "Should have context");
+	zassert_equal(report.result.return_code, -EALREADY, "Expected -EALREADY");
 }
 
 /* Test 9: Config with delay_ms=0 returns -EINVAL */
@@ -163,11 +170,11 @@ ZTEST(tick_integration, test_config_invalid)
 {
 	struct tick_report report = zlet_tick_config_set(0, K_SECONDS(1));
 
-	zassert_true(report.has_context, "Should have context");
-	zassert_equal(report.context.return_code, -EINVAL, "Expected -EINVAL");
+	zassert_true(report.has_result, "Should have context");
+	zassert_equal(report.result.return_code, -EINVAL, "Expected -EINVAL");
 }
 
-/* Test 10: Timer async events have has_context=false */
+/* Test 10: Timer async events have has_result=false */
 ZTEST(tick_integration, test_timer_async_event)
 {
 	/* Set short delay */
@@ -176,11 +183,11 @@ ZTEST(tick_integration, test_timer_async_event)
 	/* Start timer */
 	zlet_tick_start(K_SECONDS(1));
 
-	/* Wait for timer event - async event should have has_context=false */
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(2)), "Timer should fire");
-	zassert_equal(last_report.which_tick_report_tag, TICK_REPORT_EVENTS_TAG,
+	/* Wait for timer event - async event should have has_result=false */
+	zassert_ok(k_sem_take(&async_report_sem, K_SECONDS(2)), "Timer should fire");
+	zassert_equal(last_async_report.which_tick_report_tag, TICK_REPORT_EVENTS_TAG,
 		      "Expected events report");
-	zassert_false(last_has_context, "Async events should not have context");
+	zassert_false(last_async_report.has_result, "Async events should not have result");
 }
 
 /* Test 11: Report has invoke_tag set */
@@ -189,7 +196,7 @@ ZTEST(tick_integration, test_invoke_tag)
 	struct tick_report report = zlet_tick_start(K_SECONDS(1));
 
 	zassert_true(ZEPHLET_CALL_OK(report), "Start should succeed");
-	zassert_equal(report.context.invoke_tag, TICK_INVOKE_START_TAG,
+	zassert_equal(report.result.invoke_tag, TICK_INVOKE_START_TAG,
 		      "invoke_tag should indicate start");
 }
 

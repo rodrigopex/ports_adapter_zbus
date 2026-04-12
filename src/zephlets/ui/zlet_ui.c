@@ -13,10 +13,16 @@ static uint32_t blink_count;
 
 #ifdef CONFIG_ZTEST
 static bool test_is_ready = true;
+static k_timepoint_t test_last_timeout;
 
 void zlet_ui_test_set_ready(bool ready)
 {
 	test_is_ready = ready;
+}
+
+k_timepoint_t zlet_ui_test_get_last_timeout(void)
+{
+	return test_last_timeout;
 }
 #endif
 
@@ -40,11 +46,14 @@ static int zlet_ui_init(const struct zephlet *zephlet)
 	return ret;
 }
 
-static void start(const struct zephlet *zephlet, struct zephlet_context *context)
+static int start(struct zlet_ui_context *ctx)
 {
-	struct zlet_ui_data *data = zephlet->data;
-	struct zephlet_status status;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 	int ret = 0;
+
+#ifdef CONFIG_ZTEST
+	test_last_timeout = ctx->timeout;
+#endif
 
 	K_SPINLOCK(&data->lock) {
 		if (!data->status.is_ready) {
@@ -54,20 +63,15 @@ static void start(const struct zephlet *zephlet, struct zephlet_context *context
 		} else {
 			data->status.is_running = true;
 		}
-		status = data->status;
+		ctx->response.status = data->status;
 	}
 
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_ui_report_status(context, &status, K_MSEC(250));
+	return ret;
 }
 
-static void stop(const struct zephlet *zephlet, struct zephlet_context *context)
+static int stop(struct zlet_ui_context *ctx)
 {
-	struct zlet_ui_data *data = zephlet->data;
-	struct zephlet_status status;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
@@ -76,36 +80,26 @@ static void stop(const struct zephlet *zephlet, struct zephlet_context *context)
 		} else {
 			data->status.is_running = false;
 		}
-		status = data->status;
+		ctx->response.status = data->status;
 	}
 
-	if (context) {
-		context->return_code = ret;
-	}
-
-	zlet_ui_report_status(context, &status, K_MSEC(250));
+	return ret;
 }
 
-static void get_status(const struct zephlet *zephlet, struct zephlet_context *context)
+static int get_status(struct zlet_ui_context *ctx)
 {
-	struct zlet_ui_data *data = zephlet->data;
-	struct zephlet_status status;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		status = data->status;
+		ctx->response.status = data->status;
 	}
 
-	if (context) {
-		context->return_code = 0;
-	}
-
-	zlet_ui_report_status(context, &status, K_MSEC(250));
+	return 0;
 }
 
-static void config(const struct zephlet *zephlet, struct zephlet_context *context,
-		   const struct ui_config *config)
+static int config(struct zlet_ui_context *ctx, const struct ui_config *config)
 {
-	struct zlet_ui_data *data = zephlet->data;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
 		data->config = *config;
@@ -113,50 +107,37 @@ static void config(const struct zephlet *zephlet, struct zephlet_context *contex
 		/* TODO: Apply configuration changes to zephlet resources */
 	}
 
-	if (context) {
-		context->return_code = 0;
-	}
-
-	zlet_ui_report_config(context, config, K_MSEC(250));
+	ctx->response.config = *config;
+	return 0;
 }
 
-static void get_config(const struct zephlet *zephlet, struct zephlet_context *context)
+static int get_config(struct zlet_ui_context *ctx)
 {
-	struct zlet_ui_data *data = zephlet->data;
-	struct ui_config config;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		config = data->config;
+		ctx->response.config = data->config;
 	}
 
-	if (context) {
-		context->return_code = 0;
-	}
-
-	zlet_ui_report_config(context, &config, K_MSEC(250));
+	return 0;
 }
 
 /* RPC returns Ui.Events - publish to report field: events */
-static void get_last_event(const struct zephlet *zephlet, struct zephlet_context *context)
+static int get_last_event(struct zlet_ui_context *ctx)
 {
-	struct zlet_ui_data *data = zephlet->data;
-	struct ui_events events;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		events = data->events;
+		ctx->response.events = data->events;
 	}
 
-	if (context) {
-		context->return_code = 0;
-	}
-
-	zlet_ui_report_events(context, &events, K_MSEC(250));
+	return 0;
 }
 
 /* RPC returns Empty - triggered by adapter (no direct response needed) */
-static void blink(const struct zephlet *zephlet, struct zephlet_context *context)
+static int blink(struct zlet_ui_context *ctx)
 {
-	struct zlet_ui_data *data = zephlet->data;
+	struct zlet_ui_data *data = ctx->zephlet->data;
 
 	++blink_count;
 
@@ -169,14 +150,19 @@ static void blink(const struct zephlet *zephlet, struct zephlet_context *context
 
 	LOG_INF("LED blink #%u", events.blink);
 
-	/* Async event for observers (no context) */
-	zlet_ui_report_events_async(&events, K_MSEC(250));
+	/* Async event for observers — use caller's remaining timeout */
+	zlet_ui_report_events_async(&events, sys_timepoint_timeout(ctx->timeout));
 
-	/* Complete the RPC round-trip for blocking callers */
-	if (context) {
-		context->return_code = 0;
-	}
-	zlet_ui_report_empty(context, K_MSEC(250));
+	return 0;
+}
+
+static int buzzer_play(struct zlet_ui_context *ctx, enum ui_buzzer_tone buzzer_tone)
+{
+	ARG_UNUSED(buzzer_tone);
+
+	/* TODO: Implement buzzer playback */
+
+	return 0;
 }
 
 static struct zlet_ui_api api = {
@@ -187,6 +173,7 @@ static struct zlet_ui_api api = {
 	.get_config = get_config,
 	.get_last_event = get_last_event,
 	.blink = blink,
+	.buzzer_play = buzzer_play,
 };
 
 static struct zlet_ui_data data = {.status = ZEPHLET_STATUS_INIT_ZERO,
