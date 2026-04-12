@@ -16,7 +16,7 @@ void tick_to_ui_on_report_events(const struct zbus_channel *chan, const struct t
 {
 	if (report && report->events.has_tick) {
 		LOG_DBG("Received Tick event at %d, invoking UI blink", report->events.timestamp);
-		zlet_ui_blink(0, K_NO_WAIT);
+		zlet_ui_blink(K_MSEC(100));
 	}
 }
 

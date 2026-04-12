@@ -12,48 +12,25 @@ int main(void)
 {
 	printk("Example project running on a %s board.\n", CONFIG_BOARD_TARGET);
 
-	struct tick_report *report = NULL;
-
-	ZEPHLET_OBSERVE_REPORT(zlet_tick)
-	{
-		zlet_tick_config_set(100, 1000, K_FOREVER);
-		report = zlet_tick_wait_report(TICK_REPORT_CONFIG_TAG, K_MSEC(500));
+	struct tick_report report = zlet_tick_config_set(1000, K_MSEC(500));
+	if (ZEPHLET_CALL_OK(report)) {
+		printk("Config set ok, delay_ms=%d\n", report.config.delay_ms);
 	}
 
-	if (report != NULL && report->has_context) {
-		printk("Context: id=%d, return code=%d\n", report->context.correlation_id,
-		       report->context.return_code);
-	}
-
-	report = NULL;
-
-	ZEPHLET_OBSERVE_REPORT(zlet_tick)
-	{
-		zlet_tick_start(200, K_FOREVER);
-		report = zlet_tick_wait_report(TICK_REPORT_STATUS_TAG, K_MSEC(500));
-	}
-
-	if (report != NULL && report->has_context) {
-		printk("Context: id=%d, return code=%d\n", report->context.correlation_id,
-		       report->context.return_code);
-		printk("Main knows the zephlet tick is %srunning\n",
-		       report->status.is_running ? "" : "not ");
+	report = zlet_tick_start(K_MSEC(500));
+	if (ZEPHLET_CALL_OK(report)) {
+		printk("Tick is %srunning\n",
+		       report.status.is_running ? "" : "not ");
 	}
 
 	k_sleep(K_SECONDS(10));
 
-	ZEPHLET_OBSERVE_REPORT(zlet_ui)
-	{
-		zlet_ui_config_set(100, 1000, K_FOREVER);
-		struct ui_report *ui_report =
-			zlet_ui_wait_report(UI_REPORT_CONFIG_TAG, K_MSEC(500));
-		if (ui_report != NULL && ui_report->has_context) {
-			printk("Context: id=%d, return code=%d\n",
-			       ui_report->context.correlation_id, ui_report->context.return_code);
-		}
+	struct ui_report ui_report = zlet_ui_config_set(1000, K_MSEC(500));
+	if (ZEPHLET_CALL_OK(ui_report)) {
+		printk("UI config set ok\n");
 	}
 
-	zlet_tick_stop(0, K_FOREVER);
+	zlet_tick_stop(K_MSEC(500));
 
 	return 0;
 }

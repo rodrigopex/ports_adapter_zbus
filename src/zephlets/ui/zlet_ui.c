@@ -137,7 +137,7 @@ static void get_config(const struct zephlet *zephlet, struct zephlet_context *co
 }
 
 /* RPC returns Ui.Events - publish to report field: events */
-static void get_events(const struct zephlet *zephlet, struct zephlet_context *context)
+static void get_last_event(const struct zephlet *zephlet, struct zephlet_context *context)
 {
 	struct zlet_ui_data *data = zephlet->data;
 	struct ui_events events;
@@ -169,12 +169,14 @@ static void blink(const struct zephlet *zephlet, struct zephlet_context *context
 
 	LOG_INF("LED blink #%u", events.blink);
 
+	/* Async event for observers (no context) */
+	zlet_ui_report_events_async(&events, K_MSEC(250));
+
+	/* Complete the RPC round-trip for blocking callers */
 	if (context) {
 		context->return_code = 0;
 	}
-
-	/* Async event report (no context correlation) */
-	zlet_ui_report_events_async(&events, K_MSEC(250));
+	zlet_ui_report_empty(context, K_MSEC(250));
 }
 
 static struct zlet_ui_api api = {
@@ -183,7 +185,7 @@ static struct zlet_ui_api api = {
 	.get_status = get_status,
 	.config = config,
 	.get_config = get_config,
-	.get_events = get_events,
+	.get_last_event = get_last_event,
 	.blink = blink,
 };
 

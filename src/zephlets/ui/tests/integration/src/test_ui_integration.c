@@ -40,7 +40,7 @@ static void reset(void *fixture)
 	ARG_UNUSED(fixture);
 
 	/* Stop the zephlet if running */
-	zlet_ui_stop(0, K_MSEC(100));
+	zlet_ui_stop(K_MSEC(100));
 	k_sem_take(&report_sem, K_MSEC(100));  /* Consume stop report */
 
 	report_count = 0;
@@ -52,60 +52,39 @@ static void reset(void *fixture)
 
 ZTEST_SUITE(ui_integration, NULL, NULL, reset, NULL, NULL);
 
-/* Test 1: Start publishes status */
+/* Test 1: Blocking start returns status */
 ZTEST(ui_integration, test_start)
 {
-	zlet_ui_start(300, K_MSEC(100));
+	struct ui_report report = zlet_ui_start(K_SECONDS(1));
 
-	/* Wait for listener callback */
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No status report received");
-
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_STATUS_TAG,
-		      "Expected status report");
-	zassert_true(last_report.status.is_running, "ui should be running");
-	zassert_equal(report_count, 1, "Expected 1 report");
-	zassert_true(last_has_context, "Should have context");
-	zassert_equal(last_context.correlation_id, 300, "Correlation ID mismatch");
-	zassert_equal(last_context.return_code, 0, "Expected success");
+	zassert_true(ZEPHLET_CALL_OK(report), "Start should succeed");
+	zassert_true(report.status.is_running, "ui should be running");
 }
 
-/* Test 2: Stop stops zephlet */
+/* Test 2: Blocking stop returns status */
 ZTEST(ui_integration, test_stop)
 {
 	/* Start zephlet */
-	zlet_ui_start(0, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
+	zlet_ui_start(K_SECONDS(1));
 
 	/* Stop zephlet */
-	zlet_ui_stop(301, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_STATUS_TAG,
-		      "Expected status report");
-	zassert_false(last_report.status.is_running, "ui should be stopped");
-	zassert_true(last_has_context, "Should have context");
-	zassert_equal(last_context.correlation_id, 301, "Correlation ID mismatch");
-	zassert_equal(last_context.return_code, 0, "Expected success");
+	struct ui_report report = zlet_ui_stop(K_SECONDS(1));
+
+	zassert_true(ZEPHLET_CALL_OK(report), "Stop should succeed");
+	zassert_false(report.status.is_running, "ui should be stopped");
 }
 
-/* Test 3: Get status returns current state */
+/* Test 3: Blocking get status returns current state */
 ZTEST(ui_integration, test_get_status)
 {
 	/* Start zephlet first */
-	zlet_ui_start(0, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
-
-	/* Reset counter */
-	report_count = 0;
+	zlet_ui_start(K_SECONDS(1));
 
 	/* Get status */
-	zlet_ui_get_status(302, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No status from get");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_STATUS_TAG,
-		      "Expected status report");
-	zassert_true(last_report.status.is_running, "Should be running");
-	zassert_true(last_has_context, "Should have context");
-	zassert_equal(last_context.correlation_id, 302, "Correlation ID mismatch");
-	zassert_equal(last_context.return_code, 0, "Expected success");
+	struct ui_report report = zlet_ui_get_status(K_SECONDS(1));
+
+	zassert_true(ZEPHLET_CALL_OK(report), "Get status should succeed");
+	zassert_true(report.status.is_running, "Should be running");
 }
 
 /** Test 4: Config set publishes config */
@@ -113,15 +92,9 @@ ZTEST(ui_integration, test_get_status)
 /*
 ZTEST(ui_integration, test_config_set)
 {
-	struct ui_config cfg = {
-		// Fill in config field values here
-	};
+	struct ui_report report = zlet_ui_config_set(...fields..., K_SECONDS(1));
 
-	zlet_ui_config(&cfg, K_MSEC(100));
-
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report received");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_CONFIG_TAG,
-		      "Expected config report");
+	zassert_true(ZEPHLET_CALL_OK(report), "Config set should succeed");
 	// Add assertions for specific config fields
 }
 */
@@ -131,22 +104,13 @@ ZTEST(ui_integration, test_config_set)
 /*
 ZTEST(ui_integration, test_config_get)
 {
-	struct ui_config cfg = {
-		// Fill in config field values here
-	};
-
 	// First set config
-	zlet_ui_config(&cfg, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report");
-
-	// Reset counter
-	report_count = 0;
+	zlet_ui_config_set(...fields..., K_SECONDS(1));
 
 	// Get config
-	zlet_ui_get_config(K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No config report from get");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_CONFIG_TAG,
-		      "Expected config report");
+	struct ui_report report = zlet_ui_get_config(K_SECONDS(1));
+
+	zassert_true(ZEPHLET_CALL_OK(report), "Get config should succeed");
 	// Add assertions for specific config fields
 }
 */
@@ -154,55 +118,35 @@ ZTEST(ui_integration, test_config_get)
 /* Test 6: Start-Stop-Start cycle works */
 ZTEST(ui_integration, test_lifecycle_cycle)
 {
-	/* Start */
-	zlet_ui_start(303, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
-	zassert_true(last_report.status.is_running, "Should be running");
-	zassert_true(last_has_context, "Should have context");
-	zassert_equal(last_context.correlation_id, 303, "Correlation ID mismatch");
-	zassert_equal(last_context.return_code, 0, "Expected success");
+	struct ui_report report = zlet_ui_start(K_SECONDS(1));
+	zassert_true(ZEPHLET_CALL_OK(report), "First start should succeed");
+	zassert_true(report.status.is_running, "Should be running");
 
-	/* Stop */
-	zlet_ui_stop(0, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No stop status");
-	zassert_false(last_report.status.is_running, "Should be stopped");
+	report = zlet_ui_stop(K_SECONDS(1));
+	zassert_true(ZEPHLET_CALL_OK(report), "Stop should succeed");
+	zassert_false(report.status.is_running, "Should be stopped");
 
-	/* Start again */
-	zlet_ui_start(304, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No restart status");
-	zassert_true(last_report.status.is_running, "Should be running again");
-	zassert_true(last_has_context, "Should have context");
-	zassert_equal(last_context.correlation_id, 304, "Correlation ID mismatch");
-	zassert_equal(last_context.return_code, 0, "Expected success");
+	report = zlet_ui_start(K_SECONDS(1));
+	zassert_true(ZEPHLET_CALL_OK(report), "Restart should succeed");
+	zassert_true(report.status.is_running, "Should be running again");
 }
 
-/** Test 7: Custom RPC tests */
+/** Test 7: Blink RPC completes round-trip and publishes events */
 ZTEST(ui_integration, test_blink)
 {
-	/* Wait for initial events */
-	zlet_ui_get_events(0, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No initial events report");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
-		      "Expected events report");
-	zassert_equal(last_report.events.blink, 0, "Initial blink count should be 0");
+	/* Call blink RPC - now blocking, returns empty report */
+	struct ui_report report = zlet_ui_blink(K_SECONDS(1));
+	zassert_true(ZEPHLET_CALL_OK(report), "Blink should succeed");
 
-	/* Call blink RPC - uses async reporting (no context) */
-	zlet_ui_blink(305, K_MSEC(100));
-
-	/* Wait for events report - async so no context */
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No blink events report");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
-		      "Expected events report");
+	/* Also check that async event was published via listener */
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "Should have event report");
 	zassert_equal(last_report.events.blink, 1, "Blink count should be 1");
-	zassert_false(last_has_context, "Blink uses async reporting - no context");
 
 	/* Call again */
-	zlet_ui_blink(0, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No second blink events report");
-	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
-		      "Expected events report");
+	report = zlet_ui_blink(K_SECONDS(1));
+	zassert_true(ZEPHLET_CALL_OK(report), "Second blink should succeed");
+	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "Should have second event report");
 	zassert_equal(last_report.events.blink, 2, "Blink count should be 2");
-	zassert_false(last_has_context, "Blink uses async reporting - no context");
 }
 
 /* Test hook for ENODEV */
@@ -211,30 +155,32 @@ extern void zlet_ui_test_set_ready(bool ready);
 /* Test 8: Start when already running returns -EALREADY */
 ZTEST(ui_integration, test_start_already_running)
 {
-	/* Start */
-	zlet_ui_start(306, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No start status");
-	zassert_equal(last_context.return_code, 0, "First start should succeed");
+	struct ui_report report = zlet_ui_start(K_SECONDS(1));
+	zassert_true(ZEPHLET_CALL_OK(report), "First start should succeed");
 
 	/* Try to start again */
-	zlet_ui_start(307, K_MSEC(100));
-	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No second start status");
-	zassert_true(last_has_context, "Should have context");
-	zassert_equal(last_context.correlation_id, 307, "Correlation ID mismatch");
-	zassert_equal(last_context.return_code, -EALREADY, "Expected -EALREADY");
+	report = zlet_ui_start(K_SECONDS(1));
+	zassert_true(report.has_context, "Should have context");
+	zassert_equal(report.context.return_code, -EALREADY, "Expected -EALREADY");
 }
 
-/* Test 9: Start when not ready returns -ENODEV */
-/* Note: This test requires manual initialization control which is not easily */
-/* testable in integration tests. Skipping for now - ENODEV path tested in unit tests */
+/* Test 9: Report has invoke_tag set */
+ZTEST(ui_integration, test_invoke_tag)
+{
+	struct ui_report report = zlet_ui_start(K_SECONDS(1));
 
-/* Test 10: Blink async events have has_context=false */
+	zassert_true(ZEPHLET_CALL_OK(report), "Start should succeed");
+	zassert_equal(report.context.invoke_tag, UI_INVOKE_START_TAG,
+		      "invoke_tag should indicate start");
+}
+
+/* Test 10: Blink async events via listener have has_context=false */
 ZTEST(ui_integration, test_blink_async_event)
 {
 	/* Call blink RPC */
-	zlet_ui_blink(309, K_MSEC(100));
+	zlet_ui_blink(K_SECONDS(1));
 
-	/* Wait for events report - async event should have has_context=false */
+	/* The listener should see the async events report (has_context=false) */
 	zassert_ok(k_sem_take(&report_sem, K_SECONDS(1)), "No blink events report");
 	zassert_equal(last_report.which_ui_report_tag, UI_REPORT_EVENTS_TAG,
 		      "Expected events report");
