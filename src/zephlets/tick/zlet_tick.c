@@ -140,7 +140,7 @@ static int get_config(struct zlet_tick_context *ctx)
 }
 
 /* RPC returns Tick.Events - publish to report field: events */
-static int get_last_event(struct zlet_tick_context *ctx)
+static int get_events(struct zlet_tick_context *ctx)
 {
 	struct zlet_tick_data *data = ctx->zephlet->data;
 
@@ -157,7 +157,7 @@ static struct zlet_tick_api api = {
 	.get_status = get_status,
 	.config = config,
 	.get_config = get_config,
-	.get_last_event = get_last_event,
+	.get_events = get_events,
 };
 
 static struct zlet_tick_data data = {.config = {.delay_ms = 1000},  /* Default 1s */

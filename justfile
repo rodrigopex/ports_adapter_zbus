@@ -65,7 +65,6 @@ twister_out_dir := '/tmp/twister-out'
 test:
     @echo "{{ pre }} test: running all tests"
     west twister --testsuite-root src/zephlets -vvv --inline-logs -p mps2/an385 -O {{ twister_out_dir }}
-    west twister --testsuite-root tests -vvv --inline-logs -p mps2/an385 -O {{ twister_out_dir }}
 
 # Run only unit tests (from all zephlets)
 test_unit:

@@ -40,7 +40,7 @@ service UI {
   // rpc get_status(Empty) returns (MsgZephletStatus);
   // rpc config(MsgZletUi.Config) returns (Ui.Config);
   // rpc get_config(Empty) returns (Ui.Config);
-  // rpc get_last_event(Empty) returns (Ui.Events);
+  // rpc get_events(Empty) returns (Ui.Events);
   rpc blink(Empty) returns (Empty);
   rpc buzzer_play(Ui.BuzzerTone) returns (Empty);
 }

@@ -1,5 +1,3 @@
-/* Complete TODO items and remove this header when implementation is done */
-
 #include "zlet_ui_interface.h"
 
 #include "zlet_ui.h"
@@ -8,21 +6,14 @@
 
 LOG_MODULE_DECLARE(zlet_ui, CONFIG_ZEPHLET_UI_LOG_LEVEL);
 
-/* Blink counter */
 static uint32_t blink_count;
 
 #ifdef CONFIG_ZTEST
 static bool test_is_ready = true;
-static k_timepoint_t test_last_timeout;
 
 void zlet_ui_test_set_ready(bool ready)
 {
 	test_is_ready = ready;
-}
-
-k_timepoint_t zlet_ui_test_get_last_timeout(void)
-{
-	return test_last_timeout;
 }
 #endif
 
@@ -33,14 +24,11 @@ static int zlet_ui_init(const struct zephlet *zephlet)
 	int ret = 0;
 
 	K_SPINLOCK(&data->lock) {
-		/* TODO: Initialize zephlet resources (one-time setup) */
-		if (ret == 0) {
 #ifdef CONFIG_ZTEST
-			data->status.is_ready = test_is_ready;
+		data->status.is_ready = test_is_ready;
 #else
-			data->status.is_ready = true;
+		data->status.is_ready = true;
 #endif
-		}
 	}
 
 	return ret;
@@ -50,10 +38,6 @@ static int start(struct zlet_ui_context *ctx)
 {
 	struct zlet_ui_data *data = ctx->zephlet->data;
 	int ret = 0;
-
-#ifdef CONFIG_ZTEST
-	test_last_timeout = ctx->timeout;
-#endif
 
 	K_SPINLOCK(&data->lock) {
 		if (!data->status.is_ready) {
@@ -97,17 +81,15 @@ static int get_status(struct zlet_ui_context *ctx)
 	return 0;
 }
 
-static int config(struct zlet_ui_context *ctx, const struct ui_config *config)
+static int config(struct zlet_ui_context *ctx, const struct ui_config *new_config)
 {
 	struct zlet_ui_data *data = ctx->zephlet->data;
 
 	K_SPINLOCK(&data->lock) {
-		data->config = *config;
-
-		/* TODO: Apply configuration changes to zephlet resources */
+		data->config = *new_config;
 	}
 
-	ctx->response.config = *config;
+	ctx->response.config = *new_config;
 	return 0;
 }
 
@@ -123,7 +105,7 @@ static int get_config(struct zlet_ui_context *ctx)
 }
 
 /* RPC returns Ui.Events - publish to report field: events */
-static int get_last_event(struct zlet_ui_context *ctx)
+static int get_events(struct zlet_ui_context *ctx)
 {
 	struct zlet_ui_data *data = ctx->zephlet->data;
 
@@ -134,7 +116,6 @@ static int get_last_event(struct zlet_ui_context *ctx)
 	return 0;
 }
 
-/* RPC returns Empty - triggered by adapter (no direct response needed) */
 static int blink(struct zlet_ui_context *ctx)
 {
 	struct zlet_ui_data *data = ctx->zephlet->data;
@@ -158,6 +139,7 @@ static int blink(struct zlet_ui_context *ctx)
 
 static int buzzer_play(struct zlet_ui_context *ctx, enum ui_buzzer_tone buzzer_tone)
 {
+	ARG_UNUSED(ctx);
 	ARG_UNUSED(buzzer_tone);
 
 	/* TODO: Implement buzzer playback */
@@ -171,7 +153,7 @@ static struct zlet_ui_api api = {
 	.get_status = get_status,
 	.config = config,
 	.get_config = get_config,
-	.get_last_event = get_last_event,
+	.get_events = get_events,
 	.blink = blink,
 	.buzzer_play = buzzer_play,
 };
@@ -182,12 +164,8 @@ static struct zlet_ui_data data = {.status = ZEPHLET_STATUS_INIT_ZERO,
 
 int zlet_ui_init_fn(const struct zephlet *self)
 {
-	int err;
+	int err = zlet_ui_init(self);
 
-	/* Initialize zephlet resources */
-	err = zlet_ui_init(self);
-
-	/* Register implementation */
 	if (err == 0) {
 		err = zlet_ui_set_implementation(self);
 	}
