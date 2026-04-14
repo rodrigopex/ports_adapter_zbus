@@ -2,54 +2,37 @@
 
 ## Plans
 
-- Extremely concise. Sacrifice grammar.
-- List unresolved questions at end.
-- Do not consider the folders ignored by the `.gitignore` for analysis and uploads. The only exception is the explicit reference to it using `@`.
-- Keep the tokens usage as small as possible without sacrificing clarity.
-- Tell me when I am doing something wrong that is using too many tokens.
+- Extreme concision. Kill grammar.
+- End w/ unresolved questions list.
+- Ignore `.gitignore`d paths unless `@`-referenced.
+- Minimize tokens w/o losing clarity. Flag my token-wasteful asks.
 
-## Zephlet Infrastructure
+## Sibling repo (always in scope)
 
-**Infrastructure documentation:** See `modules/lib/zephlet/CLAUDE.md` and `modules/lib/zephlet/README.md`
-**West commands:** Provided by zephlet module (loaded via west.yml)
+`../modules/lib/zephlet/` = infra. Co-edited. Proto/codegen/template changes go there; app changes here. Commits that span repos → commit both. Full infra docs: `../modules/lib/zephlet/CLAUDE.md` + `README.md`. West cmds loaded via `west.yml`.
 
 ## Commands
 
-**West Extensions** (from zephlet module):
-- `west zephlet new [-n NAME] [-d DESC] [-a AUTHOR]` - Create zephlet (interactive if no args)
-- `west zephlet new-adapter [-o ORIGIN] [-d DEST] [-i]` - Create adapter (-i for interactive)
-- `west zephlet gen ZEPHLET` - Regenerate interface files (needs `build/modules/<zephlet>_zephlet`)
-
-**Build** (`just`, mps2/an385):
-- `just b` / `just c b` / `just b r` / `just c b r`
-- `just config` / `just ds` / `just da`
+West (from infra): `west zephlet new [-n -d -a]`, `west zephlet new-adapter [-o -d -i]`, `west zephlet gen Z` (needs `build/modules/<z>_zephlet`).
+Build (`just`, mps2/an385): `just b`, `just c b`, `just b r`, `just c b r`, `just config`, `just ds`, `just da`.
+Test: `just test` (twister, src/zephlets).
 
 ## Architecture
 
-**Ports & Adapters** on Zephyr RTOS via **zbus** (infrastructure from zephlet module).
+Ports+Adapters on Zephyr/zbus. Layout: `src/zephlets/` (domain, no deps), `src/adapters/` (compose via channel bridge), `src/main.c` (lifecycle).
 
-**Components:**
+### Zephlets
 
-1. Zephlets (`src/zephlets/`): Domain logic, no direct dependencies
-2. Adapters (`src/adapters/`): Compose zephlets via channel bridging
-3. Main (`src/main.c`): Lifecycle orchestration
+All use result API: correlation_id, return_code, has_result. API fns = `int (struct <z>_context *)`, fill `ctx->response`; interface publishes. Proto reserved ranges validated at build. nanopb opts: `anonymous_oneof=true`, `long_names=false`.
 
-### Application Zephlets
+- **tick** = REFERENCE — init sets is_ready; start/stop toggles is_running; timer uses `_async()`; `<z>_context` pattern.
+- **ui** — blink cmd; async events + context.
 
-**All zephlets use result API** (correlation_id, return_code, has_result flag). API functions return int, fill `ctx->response`. Interface handles publishing. **Proto field validation** enforces reserved ranges at build time. **nanopb options:** `anonymous_oneof = true` + `long_names = false` (shorter C symbols).
+### Adapters
 
-- **tick** (REFERENCE): Full implementation - init sets is_ready, start/stop controls is_running, timer uses _async(), `<zephlet>_context` pattern
-- **ui**: Blink command, demonstrates async events + context pattern
+Reference: `Tick+Ui_zlet_adapter.c` — listens tick report, checks has_result, extracts correlation_id+return_code, separates responses from async events.
+`base_adapter.c` — `LOG_MODULE_REGISTER(adapter, ...)` shared by all adapters.
 
-### Application Adapters
+## Kconfig (prj.conf)
 
-**Reference:** `Tick+Ui_zlet_adapter.c` - listens tick reports, checks has_result flag, extracts correlation_id/return_code, distinguishes responses from async events.
-**base_adapter.c:** Registers shared logging module for all adapters.
-
-## Configuration
-
-Via Kconfig in `prj.conf`:
-
-- `CONFIG_ZEPHLET_<ZEPHLET>=y` / `CONFIG_ZEPHLET_<ZEPHLET>_LOG_LEVEL_DBG=y`
-- `CONFIG_<ADAPTER>_ADAPTER=y`
-  Current: All zephlets + debug logging enabled.
+`CONFIG_ZEPHLET_<Z>=y`, `CONFIG_ZEPHLET_<Z>_LOG_LEVEL_DBG=y`, `CONFIG_<O>_TO_<D>_ADAPTER=y`. Current: all zephlets + debug.
