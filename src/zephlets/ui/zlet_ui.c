@@ -131,8 +131,8 @@ static int blink(struct zlet_ui_context *ctx)
 
 	LOG_INF("LED blink #%u", events.blink);
 
-	/* Async event for observers — use caller's remaining timeout */
-	zlet_ui_report_events_async(&events, sys_timepoint_timeout(ctx->timeout));
+	/* Async event for observers — use caller's remaining budget */
+	zlet_ui_report_events_async(&events, sys_timepoint_timeout(ctx->deadline));
 
 	return 0;
 }
