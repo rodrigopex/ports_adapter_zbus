@@ -21,8 +21,10 @@ message Ui {
     USER_BUTTON_EVENT_LONG_PRESSED = 3;
   }
 
-  message Config {
-    int32 user_button_long_press_duration = 1;
+  /* Runtime settings. Every field MUST be `optional` so update_settings
+   * can apply partial merges via nanopb has_<field> flags. */
+  message Settings {
+    optional int32 user_button_long_press_duration = 1;
   }
 
   message Events {
@@ -34,13 +36,6 @@ message Ui {
 
 service UI {
   option (zephlet.extends_base) = true; /* Extends base zlet */
-  // The following RPCs are going to be generated in this zlet proto
-  // rpc start(Empty) returns (MsgZephletStatus);
-  // rpc stop(Empty) returns (MsgZephletStatus);
-  // rpc get_status(Empty) returns (MsgZephletStatus);
-  // rpc config(MsgZletUi.Config) returns (Ui.Config);
-  // rpc get_config(Empty) returns (Ui.Config);
-  // rpc get_events(Empty) returns (Ui.Events);
   rpc blink(Empty) returns (Empty);
   rpc buzzer_play(Ui.BuzzerTone) returns (Empty);
 }

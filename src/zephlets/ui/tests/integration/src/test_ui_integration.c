@@ -94,33 +94,33 @@ ZTEST(ui_integration, test_get_status)
 	zassert_true(report.status.is_running, "Should be running");
 }
 
-/** Test 4: Config set publishes config */
-/** TODO: Uncomment and customize if Config has fields (see battery/tick for examples) */
-/*
-ZTEST(ui_integration, test_config_set)
+ZTEST(ui_integration, test_update_settings)
 {
-	struct ui_report report = zlet_ui_config_set(...fields..., K_SECONDS(1));
+	struct ui_settings delta = {
+		.has_user_button_long_press_duration = true,
+		.user_button_long_press_duration = 1500,
+	};
+	struct ui_report report = zlet_ui_update_settings(&delta, K_SECONDS(1));
 
-	zassert_true(ZEPHLET_CALL_OK(report), "Config set should succeed");
-	// Add assertions for specific config fields
+	zassert_true(ZEPHLET_CALL_OK(report), "update_settings should succeed");
+	zassert_equal(report.settings.user_button_long_press_duration, 1500,
+		      "Field mismatch");
 }
-*/
 
-/** Test 5: Get config returns current config */
-/** TODO: Uncomment and customize if Config has fields (see battery/tick for examples) */
-/*
-ZTEST(ui_integration, test_config_get)
+ZTEST(ui_integration, test_get_settings)
 {
-	// First set config
-	zlet_ui_config_set(...fields..., K_SECONDS(1));
+	struct ui_settings delta = {
+		.has_user_button_long_press_duration = true,
+		.user_button_long_press_duration = 2500,
+	};
+	zlet_ui_update_settings(&delta, K_SECONDS(1));
 
-	// Get config
-	struct ui_report report = zlet_ui_get_config(K_SECONDS(1));
+	struct ui_report report = zlet_ui_get_settings(K_SECONDS(1));
 
-	zassert_true(ZEPHLET_CALL_OK(report), "Get config should succeed");
-	// Add assertions for specific config fields
+	zassert_true(ZEPHLET_CALL_OK(report), "get_settings should succeed");
+	zassert_equal(report.settings.user_button_long_press_duration, 2500,
+		      "Field mismatch");
 }
-*/
 
 /* Test 6: Start-Stop-Start cycle works */
 ZTEST(ui_integration, test_lifecycle_cycle)
@@ -155,9 +155,6 @@ ZTEST(ui_integration, test_blink)
 	zassert_ok(k_sem_take(&async_report_sem, K_SECONDS(1)), "Should have second event report");
 	zassert_equal(last_async_report.events.blink, 2, "Blink count should be 2");
 }
-
-/* Test hooks */
-extern void zlet_ui_test_set_ready(bool ready);
 
 /* Test 8: Start when already running returns -EALREADY */
 ZTEST(ui_integration, test_start_already_running)

@@ -7,8 +7,11 @@ option (nanopb_fileopt).anonymous_oneof = true;
 option (nanopb_fileopt).long_names = false;
 
 message Tick {
-  message Config {
-    uint32 delay_ms = 1;
+  /* Runtime settings. Every field MUST be `optional` so update_settings
+   * can apply partial merges via nanopb has_<field> flags. */
+  message Settings {
+    optional uint32 delay_ms = 1;     /* tick period */
+    optional uint32 max_delay_ms = 2; /* upper bound; delay_ms <= max_delay_ms */
   }
 
   message Events {
