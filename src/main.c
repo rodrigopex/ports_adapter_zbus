@@ -7,11 +7,30 @@
 #include "zlet_tick_interface.h"
 #include "zlet_ui_interface.h"
 #include "zlet_tampering_interface.h"
+#include <errno.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 int main(void)
 {
 	printk("Example project running on a %s board.\n", CONFIG_BOARD_TARGET);
+
+	if (!zlet_tick_is_ready()) {
+		LOG_ERR("Tick zephlet is not ready");
+		return -ENODEV;
+	}
+
+	if (!zlet_ui_is_ready()) {
+		LOG_ERR("UI zephlet is not ready");
+		return -ENODEV;
+	}
+
+	if (!zlet_tampering_is_ready()) {
+		LOG_ERR("Tampering zephlet is not ready");
+		return -ENODEV;
+	}
 
 	struct tick_settings tick_delta = {0};
 
