@@ -49,6 +49,11 @@ static void reset(void *fixture)
 
 ZTEST_SUITE(tampering_integration, NULL, NULL, reset, NULL, NULL);
 
+ZTEST(tampering_integration, test_is_ready)
+{
+	zassert_true(zlet_tampering_is_ready(), "Tampering should be ready after init");
+}
+
 ZTEST(tampering_integration, test_start)
 {
 	struct tampering_report report = zlet_tampering_start(K_SECONDS(1));

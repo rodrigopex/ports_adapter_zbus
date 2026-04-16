@@ -77,9 +77,6 @@ int zlet_tick_init_fn(const struct zephlet *self)
 	tick_settings_init(&defaults);
 
 	int err = zlet_tick_set_implementation(self);
-	if (err == 0) {
-		zephlet_mark_ready(self);
-	}
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 	return err;
 }

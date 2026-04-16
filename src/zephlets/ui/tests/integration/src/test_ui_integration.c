@@ -59,6 +59,11 @@ static void reset(void *fixture)
 
 ZTEST_SUITE(ui_integration, NULL, NULL, reset, NULL, NULL);
 
+ZTEST(ui_integration, test_is_ready)
+{
+	zassert_true(zlet_ui_is_ready(), "UI should be ready after init");
+}
+
 /* Test 1: Blocking start returns status */
 ZTEST(ui_integration, test_start)
 {

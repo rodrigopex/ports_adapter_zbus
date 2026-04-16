@@ -58,9 +58,6 @@ static struct zlet_tampering_api api = {.force_tampering = force_tampering};
 int zlet_tampering_init_fn(const struct zephlet *self)
 {
 	int err = zlet_tampering_set_implementation(self);
-	if (err == 0) {
-		zephlet_mark_ready(self);
-	}
 	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
 	return err;
 }

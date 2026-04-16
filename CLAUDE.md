@@ -25,7 +25,7 @@ Ports+Adapters on Zephyr/zbus. Layout: `src/zephlets/` (domain, no deps), `src/a
 
 All use result API: correlation_id, return_code, has_result. API fns = `int (struct <z>_context *)`, fill `ctx->response`; interface publishes. Proto reserved ranges validated at build. nanopb opts: `anonymous_oneof=true`, `long_names=false`.
 
-- **tick** = REFERENCE — init sets is_ready; start/stop toggles is_running; timer uses `_async()`; `<z>_context` pattern.
+- **tick** = REFERENCE — framework auto-marks is_ready on init return 0; `<z>_is_ready()` zero-arg check; start/stop toggles is_running; timer uses `_async()`; `<z>_context` pattern.
 - **ui** — blink cmd; async events + context.
 
 ### Adapters

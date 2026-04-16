@@ -67,6 +67,11 @@ static void reset(void *fixture)
 
 ZTEST_SUITE(tick_integration, NULL, NULL, reset, NULL, NULL);
 
+ZTEST(tick_integration, test_is_ready)
+{
+	zassert_true(zlet_tick_is_ready(), "Tick should be ready after init");
+}
+
 ZTEST(tick_integration, test_start)
 {
 	struct tick_report report = zlet_tick_start(K_SECONDS(1));
