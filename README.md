@@ -29,7 +29,7 @@ Protobuf definitions (`zlet_<name>.proto`) drive automatic generation of interfa
 
 **Zephlets:**
 
-- `shared`: Common types (`Empty`, `MsgZephletStatus`), `ZEPHLET_DEFINE()` macro
+- `shared`: Common types (`Empty`, `MsgZephletStatus`), `ZEPHLET_IMPL_REGISTER()` macro
 - `tick`: Fully implemented - K_TIMER-based timed events with spinlock protection
 - `ui`: Generated template (pending implementation)
 
@@ -119,7 +119,7 @@ Zephlet state protected by K_SPINLOCK. All state modifications acquire spinlock.
 
 **Data Flow:**
 
-1. **Init:** init_fn registers implementation via `ZEPHLET_DEFINE()`
+1. **Init:** init_fn registers implementation via `ZEPHLET_IMPL_REGISTER()`
 2. **Start:** Inline function publishes to invoke channel
 3. **Dispatch:** Dispatcher routes to API function pointer
 4. **Execute:** API function updates state under spinlock, publishes to report channel

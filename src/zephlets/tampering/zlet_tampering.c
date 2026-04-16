@@ -40,4 +40,4 @@ int zlet_tampering_init_fn(const struct zephlet *self)
 	return err;
 }
 
-ZEPHLET_DEFINE(zlet_tampering, zlet_tampering_init_fn, &api, NULL);
+ZEPHLET_IMPL_REGISTER(tampering, zlet_tampering_init_fn, &api, NULL);

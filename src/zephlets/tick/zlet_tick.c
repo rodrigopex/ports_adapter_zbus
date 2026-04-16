@@ -92,4 +92,4 @@ static int tick_init_fn(const struct zephlet *self)
 	return 0;
 }
 
-ZEPHLET_DEFINE(zlet_tick, tick_init_fn, NULL, &inst_data);
+ZEPHLET_IMPL_REGISTER(tick, tick_init_fn, NULL, &inst_data);

@@ -47,4 +47,4 @@ int zlet_ui_init_fn(const struct zephlet *self)
 	return err;
 }
 
-ZEPHLET_DEFINE(zlet_ui, zlet_ui_init_fn, &api, NULL);
+ZEPHLET_IMPL_REGISTER(ui, zlet_ui_init_fn, &api, NULL);
