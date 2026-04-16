@@ -16,7 +16,7 @@ LOG_MODULE_DECLARE(adapter, CONFIG_ADAPTERS_LOG_LEVEL);
 void tampering_to_ui_on_report_events(const struct zbus_channel *chan,
 				      const struct tampering_report *report)
 {
-	if (report && report->events.contact_tamper_detected) {
+	if (report->events.proximity_tamper_detected) {
 		LOG_DBG("Received tampering event at %d, invoking UI blink",
 			report->events.timestamp);
 		zlet_ui_blink(K_MSEC(100));

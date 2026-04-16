@@ -43,8 +43,8 @@ int zlet_ui_pre_stop(const struct zephlet *self)
 int zlet_ui_init_fn(const struct zephlet *self)
 {
 	int err = zlet_ui_set_implementation(self);
-	printk("   -> %s %sinitialized\n", self->name, err == 0 ? "" : "not ");
+	printk("   -> %s %sinitialized\n", self->config.name, err == 0 ? "" : "not ");
 	return err;
 }
 
-ZEPHLET_DEFINE(zlet_ui, zlet_ui_init_fn, &api);
+ZEPHLET_DEFINE(zlet_ui, zlet_ui_init_fn, &api, NULL);
