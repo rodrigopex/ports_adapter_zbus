@@ -12,13 +12,9 @@ static void zlet_tick_timer_handler(struct k_timer *timer_id)
 
 	LOG_DBG("tick!");
 
-	/* Clone preserves any other optional fields future Events adds;
-	 * the spinlock inside clone is ISR-safe on single-CPU. */
-	struct tick_events ev = tick_events_clone();
-	ev.timestamp = k_uptime_get();
-	ev.has_tick = true;
+	struct tick_events delta = {.has_tick = true};
 
-	tick_events_update(&ev, K_NO_WAIT);
+	tick_events_update(NULL, &delta);
 }
 
 K_TIMER_DEFINE(timer_zlet_tick, zlet_tick_timer_handler, NULL);

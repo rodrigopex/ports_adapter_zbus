@@ -12,6 +12,7 @@ set(EXTRA_ZEPHYR_MODULES
     "${CMAKE_SOURCE_DIR}/src/adapters"
     "${SERVICES_PATH}/ui"
     "${SERVICES_PATH}/tick"
+    "${SERVICES_PATH}/tampering"
 )
 message(WARNING "Extra Zephyr Modules Path: ${EXTRA_ZEPHYR_MODULES}")
 

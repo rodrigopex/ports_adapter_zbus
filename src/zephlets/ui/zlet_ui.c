@@ -7,15 +7,15 @@ LOG_MODULE_DECLARE(zlet_ui, CONFIG_ZEPHLET_UI_LOG_LEVEL);
 
 static int blink(struct zlet_ui_context *ctx)
 {
-	struct ui_events ev = ui_events_clone();
-	ev.has_blink = true;
-	ev.blink++;
-	ev.timestamp = k_uptime_get();
+	struct ui_events current = ui_events_clone();
+	struct ui_events delta = {
+		.has_blink = true,
+		.blink = current.blink + 1,
+	};
 
-	LOG_INF("LED blink #%u", ev.blink);
+	LOG_INF("LED blink #%u", delta.blink);
 
-	/* Commits to events storage AND publishes async — single call. */
-	ui_events_update(&ev, sys_timepoint_timeout(ctx->deadline));
+	ui_events_update(ctx, &delta);
 	return 0;
 }
 

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "nanopb.proto";
+import "zephlet.proto";
+
+option (nanopb_fileopt).anonymous_oneof = true;
+option (nanopb_fileopt).long_names = false;
+
+message Tampering {
+  /* RPC-mutable runtime settings. Every field MUST be `optional` so the
+   * generated update_settings merge can use nanopb has_<field> flags. */
+  message Settings {
+    optional int32 light_tamper_threshold = 1;
+    optional int32 proximity_tamper_threshold = 2;
+  }
+
+  message Events {
+    int32 timestamp = 1;
+    optional bool light_tamper_detected = 2;
+    optional bool proximity_tamper_detected = 3;
+    optional bool contact_tamper_detected = 4;
+  }
+}
+
+service Tampering {
+  option (zephlet.extends_base) = true; /* Extends base zlet */
+  rpc force_tampering(Empty) returns (Events);
+  /* Custom RPCs below (base lifecycle RPCs are auto-generated) */
+}

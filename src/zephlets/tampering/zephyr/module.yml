@@ -1,0 +1,4 @@
+name: zlet_tampering
+build:
+  cmake: .
+  kconfig: Kconfig

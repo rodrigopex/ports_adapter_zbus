@@ -5,5 +5,6 @@ if(CONFIG_ADAPTERS)
     set(ZEPHLETS_PATH "${CMAKE_SOURCE_DIR}/src/zephlets")
 
     zephlet_adapter_generate(ORIGIN tick DEST ui REPORTS events status)
+    zephlet_adapter_generate(ORIGIN tampering DEST ui REPORTS events)
 
 endif()

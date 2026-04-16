@@ -18,6 +18,11 @@ config DEBUG_ADAPTER
     default y
     depends on ZEPHLET_TICK && ZEPHLET_TAMPER_DETECTION
 
+config TAMPERING_TO_UI_ADAPTER
+	bool "From tampering to ui zephlet adapter"
+	default y
+	depends on ZEPHLET_TAMPERING && ZEPHLET_UI
+
 module = ADAPTERS
 module-str = adapter
 source "subsys/logging/Kconfig.template.log_config"

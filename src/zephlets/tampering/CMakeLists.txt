@@ -1,0 +1,1 @@
+zephyr_zephlet_define(tampering)

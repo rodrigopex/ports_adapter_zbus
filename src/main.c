@@ -6,6 +6,7 @@
 
 #include "zlet_tick_interface.h"
 #include "zlet_ui_interface.h"
+#include "zlet_tampering_interface.h"
 #include <zephyr/kernel.h>
 
 int main(void)
@@ -48,10 +49,16 @@ int main(void)
 		printk("Tick is %srunning\n", tick_report.status.is_running ? "" : "not ");
 	}
 
-	k_sleep(K_SECONDS(10));
+	k_sleep(K_SECONDS(5));
 
 	zlet_tick_stop(K_MSEC(500));
-	zlet_ui_stop(K_MSEC(500));
 
+	zlet_tampering_start(K_FOREVER);
+
+	zlet_tampering_force_tampering(K_MSEC(250));
+
+	zlet_tampering_stop(K_FOREVER);
+
+	zlet_ui_stop(K_MSEC(500));
 	return 0;
 }

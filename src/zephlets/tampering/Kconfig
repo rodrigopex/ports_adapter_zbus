@@ -1,0 +1,16 @@
+config ZEPHLET_TAMPERING
+    bool "Tampering Zephlet Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the Tampering Zephlet Module in the build.
+      Tampering Zephlet Module.
+
+if(ZEPHLET_TAMPERING)
+
+module = ZEPHLET_TAMPERING
+module-str = zlet_tampering
+source "subsys/logging/Kconfig.template.log_config"
+
+endif
