@@ -1,95 +1,158 @@
-#include "zlet_tick.h"
+#include "zlet_tick_interface.h"
 
 #include <errno.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zlet_tick, CONFIG_ZEPHLET_TICK_LOG_LEVEL);
 
-struct tick_instance_data {
-	struct k_timer timer;
-};
-
-static struct tick_instance_data inst_data;
-
 static void tick_timer_handler(struct k_timer *timer_id)
 {
-	ARG_UNUSED(timer_id);
-
-	LOG_DBG("tick!");
-
-	struct tick_events delta = {.has_tick = true};
-
-	tick_events_update(NULL, &delta);
-}
-
-/* Strong hook overrides ------------------------------------------------- */
-
-int zlet_tick_post_start(const struct zephlet *self)
-{
-	struct tick_instance_data *inst_data = self->instance_data;
-	struct tick_settings s = tick_settings_clone();
-
-	k_timer_start(&inst_data->timer, K_MSEC(s.delay_ms), K_MSEC(s.delay_ms));
-	LOG_DBG("Zephlet started with delay %u ms!", s.delay_ms);
-	return 0;
-}
-
-int zlet_tick_pre_stop(const struct zephlet *self)
-{
-	struct tick_instance_data *inst_data = self->instance_data;
-
-	k_timer_stop(&inst_data->timer);
-	LOG_DBG("Zephlet Tick stopped!");
-	return 0;
-}
-
-int zlet_tick_validate_settings(const struct tick_settings *merged)
-{
-	if (merged->delay_ms == 0) {
-		return -EINVAL;
-	}
-	if (merged->max_delay_ms != 0 && merged->delay_ms > merged->max_delay_ms) {
-		return -EINVAL;
-	}
-	return 0;
-}
-
-int zlet_tick_post_update_settings(const struct zephlet *self)
-{
-	struct tick_instance_data *inst_data = self->instance_data;
-	struct zephlet_status status = tick_status_clone();
-
-	if (status.is_running) {
-		k_timer_stop(&inst_data->timer);
-		struct tick_settings s = tick_settings_clone();
-		k_timer_start(&inst_data->timer, K_MSEC(s.delay_ms), K_MSEC(s.delay_ms));
-	}
-	return 0;
-}
-
-static int tick_init_fn(const struct zephlet *self)
-{
-	struct tick_settings defaults = {
-		.has_delay_ms = true,
-		.delay_ms = 2000,
-		.has_max_delay_ms = true,
-		.max_delay_ms = 60000,
+	const struct zephlet *z = k_timer_user_data_get(timer_id);
+	struct tick_events ev = {
+		.timestamp = (int32_t)k_uptime_get(),
 	};
 
-	int err = zlet_tick_set_implementation(self);
+	(void)tick_emit(z, &ev, K_NO_WAIT);
+}
+
+static int validate_config(const struct tick_config *c)
+{
+	if (c->period_ms == 0) {
+		return -EINVAL;
+	}
+	if (c->max_period_ms != 0 && c->period_ms > c->max_period_ms) {
+		return -EINVAL;
+	}
+	return 0;
+}
+
+/* ----- Strong handler overrides --------------------------------------- */
+
+int tick_on_start(const struct zephlet *z, struct zephlet_status *resp)
+{
+	struct tick_data *d = z->data;
+
+	if (!d->is_ready) {
+		if (resp != NULL) {
+			resp->is_running = false;
+			resp->is_ready = false;
+		}
+		return -ENODEV;
+	}
+	if (d->is_running) {
+		if (resp != NULL) {
+			resp->is_running = true;
+			resp->is_ready = true;
+		}
+		return -EALREADY;
+	}
+
+	k_timer_start(&d->timer, K_MSEC(d->current_config.period_ms),
+		      K_MSEC(d->current_config.period_ms));
+	d->is_running = true;
+
+	if (resp != NULL) {
+		resp->is_running = true;
+		resp->is_ready = true;
+	}
+	LOG_DBG("%s: started (period=%u ms)", z->name, d->current_config.period_ms);
+	return 0;
+}
+
+int tick_on_stop(const struct zephlet *z, struct zephlet_status *resp)
+{
+	struct tick_data *d = z->data;
+
+	if (!d->is_running) {
+		if (resp != NULL) {
+			resp->is_running = false;
+			resp->is_ready = d->is_ready;
+		}
+		return -EALREADY;
+	}
+
+	k_timer_stop(&d->timer);
+	d->is_running = false;
+
+	if (resp != NULL) {
+		resp->is_running = false;
+		resp->is_ready = d->is_ready;
+	}
+	LOG_DBG("%s: stopped", z->name);
+	return 0;
+}
+
+int tick_on_get_status(const struct zephlet *z, struct zephlet_status *resp)
+{
+	struct tick_data *d = z->data;
+
+	if (resp != NULL) {
+		resp->is_running = d->is_running;
+		resp->is_ready = d->is_ready;
+	}
+	return 0;
+}
+
+int tick_on_config(const struct zephlet *z, const struct tick_config *req,
+		   struct tick_config *resp)
+{
+	struct tick_data *d = z->data;
+	int err = validate_config(req);
+
 	if (err != 0) {
-		printk("   -> %s not initialized\n", self->config.name);
+		if (resp != NULL) {
+			*resp = d->current_config;
+		}
 		return err;
 	}
 
-	struct tick_instance_data *inst_data = self->instance_data;
+	d->current_config = *req;
 
-	tick_settings_init(&defaults);
-	k_timer_init(&inst_data->timer, tick_timer_handler, NULL);
+	if (d->is_running) {
+		k_timer_stop(&d->timer);
+		k_timer_start(&d->timer, K_MSEC(d->current_config.period_ms),
+			      K_MSEC(d->current_config.period_ms));
+	}
 
-	printk("   -> %s initialized\n", self->config.name);
+	if (resp != NULL) {
+		*resp = d->current_config;
+	}
+	LOG_DBG("%s: reconfigured (period=%u ms)", z->name, d->current_config.period_ms);
 	return 0;
 }
 
-ZEPHLET_IMPL_REGISTER(tick, tick_init_fn, NULL, &inst_data);
+int tick_on_get_config(const struct zephlet *z, struct tick_config *resp)
+{
+	struct tick_data *d = z->data;
+
+	if (resp != NULL) {
+		*resp = d->current_config;
+	}
+	return 0;
+}
+
+/* ----- Init fn --------------------------------------------------------- */
+
+int tick_init_fn(const struct zephlet *self)
+{
+	struct tick_data *d = self->data;
+	const struct tick_config *cfg = self->config;
+
+	if (cfg != NULL) {
+		d->current_config = *cfg;
+	} else {
+		d->current_config.period_ms = 1000;
+		d->current_config.max_period_ms = 60000;
+	}
+
+	k_timer_init(&d->timer, tick_timer_handler, NULL);
+	k_timer_user_data_set(&d->timer, (void *)self);
+
+	d->is_running = false;
+	d->is_ready = true;
+
+	LOG_INF("%s: init (period=%u ms)", self->name, d->current_config.period_ms);
+	return 0;
+}
