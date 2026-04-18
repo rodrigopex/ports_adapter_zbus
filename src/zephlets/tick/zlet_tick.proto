@@ -3,7 +3,6 @@ syntax = "proto3";
 import "nanopb.proto";
 import "zephlet.proto";
 
-option (nanopb_fileopt).anonymous_oneof = true;
 option (nanopb_fileopt).long_names = false;
 
 message Tick {
@@ -24,9 +23,9 @@ message Tick {
  * block directly.
  */
 service TickApi {
-  rpc start      (Empty)        returns (ZephletStatus);
-  rpc stop       (Empty)        returns (ZephletStatus);
-  rpc get_status (Empty)        returns (ZephletStatus);
+  rpc start      (Empty)        returns (Lifecycle.Status);
+  rpc stop       (Empty)        returns (Lifecycle.Status);
+  rpc get_status (Empty)        returns (Lifecycle.Status);
   rpc config     (Tick.Config)  returns (Tick.Config);
   rpc get_config (Empty)        returns (Tick.Config);
 }
