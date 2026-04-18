@@ -91,7 +91,7 @@ ZTEST(tick_v03, test_is_ready)
 
 ZTEST(tick_v03, test_start_stop)
 {
-	struct zephlet_status st = {0};
+	struct lifecycle_status st = {0};
 
 	zassert_ok(tick_start(&tick_fast, &st, K_MSEC(100)));
 	zassert_true(st.is_running);
@@ -155,8 +155,8 @@ ZTEST(tick_v03, test_instances_have_distinct_default_configs)
 
 ZTEST(tick_v03, test_start_one_leaves_other_idle)
 {
-	struct zephlet_status fast_st = {0};
-	struct zephlet_status slow_st = {0};
+	struct lifecycle_status fast_st = {0};
+	struct lifecycle_status slow_st = {0};
 
 	zassert_ok(tick_start(&tick_fast, &fast_st, K_MSEC(100)));
 	zassert_true(fast_st.is_running);
