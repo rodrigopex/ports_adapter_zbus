@@ -26,7 +26,7 @@ fail() { printf '\033[1;31m[FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 
 run_zephlet_suite() {
     local name=$1
-    local test_dir="${APP_ROOT}/src/zephlets/${name}/tests/integration"
+    local test_dir="${APP_ROOT}/src/${name}/tests/integration"
     local build_dir="/tmp/dod_${name}_build"
 
     log "Building ${name} integration test..."
@@ -36,7 +36,7 @@ run_zephlet_suite() {
 
     log "Running ${name} integration test..."
     local output
-    output=$(cd "${build_dir}" && timeout 30 west build -t run 2>&1 || true)
+    output=$(cd "${APP_ROOT}" && timeout 30 west build -d "${build_dir}" -t run 2>&1 || true)
     if ! grep -q "SUITE PASS.*\[${name}_v03\]" <<<"${output}"; then
         echo "${output}" | tail -40
         fail "${name} integration suite did not report SUITE PASS"
@@ -61,7 +61,7 @@ run_scaffold_check() {
         || fail "scaffolded zephlet did not build at ${SCAFFOLD_BASE}/dodcheck"
 
     local output
-    output=$(cd "${build_dir}" && timeout 30 west build -t run 2>&1 || true)
+    output=$(cd "${APP_ROOT}" && timeout 30 west build -d "${build_dir}" -t run 2>&1 || true)
     grep -q "SUITE PASS.*\[dodcheck_integration\]" <<<"${output}" \
         || { echo "${output}" | tail -40; fail "scaffolded zephlet suite did not pass"; }
     pass "scaffolded zephlet at unusual location (${SCAFFOLD_BASE}/dodcheck)"

@@ -13,9 +13,9 @@ Instances are declared with `ZEPHLET_DEFINE(type, name, cfg, data, init)` and au
 
 ## Components
 
-- `src/zephlets/tick/` — k_timer → periodic `tick_events` with timestamp.
-- `src/zephlets/ui/` — `blink` RPC increments a counter and emits `ui_events`.
-- `src/zephlets/tampering/` — `force_tampering` RPC emits `tampering_events` with `proximity_tamper_detected=true`.
+- `src/tick/` — k_timer → periodic `tick_events` with timestamp.
+- `src/ui/` — `blink` RPC increments a counter and emits `ui_events`.
+- `src/tampering/` — `force_tampering` RPC emits `tampering_events` with `proximity_tamper_detected=true`.
 - `src/adapters.c` — two `ZEPHLET_EVENTS_LISTENER` blocks wiring tick + tampering events to `ui_blink`.
 - `src/main.c` — instantiates one of each (`tick_instance`, `ui_instance`, `tampering_instance`) and drives lifecycle.
 
@@ -47,7 +47,7 @@ Tick is running
 
 - Pure **domain isolation**: zephlets don't `#include` each other. Wiring happens only in `main.c` (instance definitions) and `adapters.c` (event subscriptions).
 - **Sync RPC without gymnastics**: pointer-in-channel + zbus sync-listener gives identity-equals-address and in-place mutation in the caller's thread.
-- **No framework-mandated layout**: the `src/zephlets/` and `src/adapters.c` paths are *this app's* choice; the zephlet framework takes no position.
+- **No framework-mandated layout**: this app's flat `src/<name>/` zephlet dirs and `src/adapters.c` are *this app's* choice; the zephlet framework takes no position.
 
 ## Configuration
 

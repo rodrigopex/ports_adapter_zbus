@@ -28,13 +28,13 @@ Ports+Adapters on Zephyr/zbus.
 
 **Non-singleton.** Instances declared with `ZEPHLET_DEFINE(type, name, cfg, data, init)`. Multiple per type OK.
 
-**Layout is user choice.** The app happens to put zephlets under `src/zephlets/` and adapters at `src/adapters.c`, but the framework doesn't require it.
+**Layout is user choice.** The app happens to put zephlets under `src/` and adapters at `src/adapters.c`, but the framework doesn't require it.
 
 ### Zephlets
 
-- `src/zephlets/tick/`   — periodic k_timer → emits `tick_events` with timestamp.
-- `src/zephlets/ui/`     — blink counter (on_blink increments + emits); config carries user_button_long_press_duration.
-- `src/zephlets/tampering/` — `force_tampering` RPC emits `tampering_events` with `proximity_tamper_detected=true`.
+- `src/tick/`   — periodic k_timer → emits `tick_events` with timestamp.
+- `src/ui/`     — blink counter (on_blink increments + emits); config carries user_button_long_press_duration.
+- `src/tampering/` — `force_tampering` RPC emits `tampering_events` with `proximity_tamper_detected=true`.
 
 Each has `<prefix>.{proto,h,c}` (user) + `<prefix>_interface.{h,c}` (generated in build dir). User `.h` declares `struct <type>_data` with framework-standard fields first (is_running, is_ready, current_config) then custom state.
 
