@@ -18,21 +18,20 @@
 LOG_MODULE_REGISTER(adapters, LOG_LEVEL_DBG);
 
 /* Instances are defined (via ZEPHLET_DEFINE) in main.c. */
-extern const struct zephlet ui_instance;
+extern const struct zephlet z_ui;
 
 static void on_tick_event(const struct tick_events *ev)
 {
 	LOG_DBG("tick event @%d -> ui_blink", ev->timestamp);
-	(void)ui_blink(&ui_instance, K_MSEC(100));
+	(void)ui_blink(&z_ui, K_MSEC(100));
 }
+ZEPHLET_EVENTS_LISTENER(tick_base, tick, on_tick_event);
 
 static void on_tampering_event(const struct tampering_events *ev)
 {
 	if (ev->proximity_tamper_detected) {
 		LOG_DBG("tampering proximity @%d -> ui_blink", ev->timestamp);
-		(void)ui_blink(&ui_instance, K_MSEC(100));
+		(void)ui_blink(&z_ui, K_MSEC(100));
 	}
 }
-
-ZEPHLET_EVENTS_LISTENER(tick_instance,      tick,      on_tick_event);
-ZEPHLET_EVENTS_LISTENER(tampering_instance, tampering, on_tampering_event);
+ZEPHLET_EVENTS_LISTENER(tampering_service, tampering, on_tampering_event);
