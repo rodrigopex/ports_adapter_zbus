@@ -25,10 +25,12 @@
  * as opaque; the tick handlers are the only readers/writers.
  */
 struct tick_data {
-	struct k_timer timer;
+	/* ----- Framework-standard fields (keep first, in this order) ----- */
 	bool is_running;
 	bool is_ready;
 	struct tick_config current_config;
+	/* ----- Custom fields below ----- */
+	struct k_timer timer;
 };
 
 /**
