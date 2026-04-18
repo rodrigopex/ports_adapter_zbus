@@ -9,7 +9,7 @@
 #include <zephyr/zbus/zbus.h>
 #include <zephyr/ztest.h>
 
-#include "zlet_tick_interface.h"
+#include "zlet_tick.h"
 
 /* ----- Two tick instances with distinct compile-time configs. -------- */
 

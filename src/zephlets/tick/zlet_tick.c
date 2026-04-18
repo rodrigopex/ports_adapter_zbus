@@ -1,4 +1,4 @@
-#include "zlet_tick_interface.h"
+#include "zlet_tick.h"
 
 #include <errno.h>
 
