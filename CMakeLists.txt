@@ -9,7 +9,6 @@ set(SERVICES_PATH "${CMAKE_SOURCE_DIR}/src/zephlets")
 set_property(GLOBAL PROPERTY PROTO_FILES_LIST)
 
 set(EXTRA_ZEPHYR_MODULES
-    "${CMAKE_SOURCE_DIR}/src/adapters"
     "${SERVICES_PATH}/ui"
     "${SERVICES_PATH}/tick"
     "${SERVICES_PATH}/tampering"
@@ -35,4 +34,4 @@ zephyr_nanopb_sources(app ${LOCAL_PROTO_FILES_LIST})
 set(CMAKE_CURRENT_SOURCE_DIR ${SAVED_CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(CMAKE_CURRENT_BINARY_DIR)
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/main.c src/adapters.c)

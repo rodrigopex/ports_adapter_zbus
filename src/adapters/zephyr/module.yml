@@ -1,4 +1,0 @@
-name: adapters
-build:
-  cmake: .
-  kconfig: Kconfig

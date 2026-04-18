@@ -35,24 +35,24 @@ static atomic_t slow_event_count;
 static K_SEM_DEFINE(fast_event_sem, 0, 100);
 static K_SEM_DEFINE(slow_event_sem, 0, 100);
 
-static void fast_events_listener(const struct zbus_channel *chan)
+static void on_fast_tick(const struct tick_events *ev)
 {
-	ARG_UNUSED(chan);
+	ARG_UNUSED(ev);
 	atomic_inc(&fast_event_count);
 	k_sem_give(&fast_event_sem);
 }
 
-static void slow_events_listener(const struct zbus_channel *chan)
+static void on_slow_tick(const struct tick_events *ev)
 {
-	ARG_UNUSED(chan);
+	ARG_UNUSED(ev);
 	atomic_inc(&slow_event_count);
 	k_sem_give(&slow_event_sem);
 }
 
-ZBUS_LISTENER_DEFINE(lis_test_fast_events, fast_events_listener);
-ZBUS_LISTENER_DEFINE(lis_test_slow_events, slow_events_listener);
-ZBUS_CHAN_ADD_OBS(chan_tick_fast_events, lis_test_fast_events, 2);
-ZBUS_CHAN_ADD_OBS(chan_tick_slow_events, lis_test_slow_events, 2);
+/* Exercises ZEPHLET_EVENTS_LISTENER: one listener per instance's
+ * events channel, user callback receives the typed events struct. */
+ZEPHLET_EVENTS_LISTENER(tick_fast, tick, on_fast_tick);
+ZEPHLET_EVENTS_LISTENER(tick_slow, tick, on_slow_tick);
 
 static void reset_event_counters(void)
 {

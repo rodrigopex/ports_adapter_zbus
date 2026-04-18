@@ -4,80 +4,84 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "zlet_tick_interface.h"
-#include "zlet_ui_interface.h"
-#include "zlet_tampering_interface.h"
 #include <errno.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
+#include "zlet_tick.h"
+#include "zlet_ui.h"
+#include "zlet_tampering.h"
+
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
+
+/* ----- Instance storage + compile-time config ------------------------- */
+
+static struct tick_data       tick_storage;
+static struct ui_data         ui_storage;
+static struct tampering_data  tampering_storage;
+
+static const struct tick_config tick_cfg = {
+	.period_ms = 1000,
+	.max_period_ms = 60000,
+};
+static const struct ui_config ui_cfg = {
+	.user_button_long_press_duration = 1000,
+};
+static const struct tampering_config tampering_cfg = {
+	.light_tamper_threshold = 100,
+	.proximity_tamper_threshold = 50,
+};
+
+ZEPHLET_DEFINE(tick,      tick_instance,      &tick_cfg,       &tick_storage,       tick_init_fn);
+ZEPHLET_DEFINE(ui,        ui_instance,        &ui_cfg,         &ui_storage,         ui_init_fn);
+ZEPHLET_DEFINE(tampering, tampering_instance, &tampering_cfg,  &tampering_storage,  tampering_init_fn);
 
 int main(void)
 {
 	printk("Example project running on a %s board.\n", CONFIG_BOARD_TARGET);
 
-	if (!zlet_tick_is_ready()) {
-		LOG_ERR("Tick zephlet is not ready");
+	if (!tick_is_ready(&tick_instance)) {
+		LOG_ERR("Tick not ready");
+		return -ENODEV;
+	}
+	if (!ui_is_ready(&ui_instance)) {
+		LOG_ERR("UI not ready");
+		return -ENODEV;
+	}
+	if (!tampering_is_ready(&tampering_instance)) {
+		LOG_ERR("Tampering not ready");
 		return -ENODEV;
 	}
 
-	if (!zlet_ui_is_ready()) {
-		LOG_ERR("UI zephlet is not ready");
-		return -ENODEV;
+	struct tick_config tick_now = {0};
+	if (tick_get_config(&tick_instance, &tick_now, K_MSEC(500)) == 0) {
+		printk("Tick config: period_ms=%u\n", tick_now.period_ms);
 	}
 
-	if (!zlet_tampering_is_ready()) {
-		LOG_ERR("Tampering zephlet is not ready");
-		return -ENODEV;
+	struct tick_config tick_new = {.period_ms = 1000, .max_period_ms = 60000};
+	if (tick_config(&tick_instance, &tick_new, NULL, K_MSEC(500)) == 0) {
+		printk("Tick config updated, period_ms=%u\n", tick_new.period_ms);
 	}
 
-	struct tick_settings tick_delta = {0};
+	struct lifecycle_status st = {0};
 
-	struct tick_report tick_report = zlet_tick_get_settings(K_MSEC(500));
-	if (ZEPHLET_CALL_OK(tick_report)) {
-		tick_delta = tick_report.settings;
-		printk("Tick settings: delay_ms=%u\n", tick_report.settings.delay_ms);
+	if (ui_start(&ui_instance, &st, K_MSEC(500)) == 0) {
+		printk("UI is %srunning\n", st.is_running ? "" : "not ");
 	}
 
-	tick_delta.has_delay_ms = true;
-	tick_delta.delay_ms = 1000;
-
-	tick_report = zlet_tick_update_settings(&tick_delta, K_MSEC(500));
-	if (ZEPHLET_CALL_OK(tick_report)) {
-		printk("Tick settings updated, delay_ms=%u\n", tick_report.settings.delay_ms);
-	}
-
-	struct ui_settings ui_delta = {
-		.has_user_button_long_press_duration = true,
-		.user_button_long_press_duration = 1000,
-	};
-
-	struct ui_report ui_report = zlet_ui_update_settings(&ui_delta, K_MSEC(500));
-	if (ZEPHLET_CALL_OK(ui_report)) {
-		printk("UI settings updated\n");
-	}
-
-	ui_report = zlet_ui_start(K_MSEC(500));
-	if (ZEPHLET_CALL_OK(ui_report)) {
-		printk("UI is %srunning\n", ui_report.status.is_running ? "" : "not ");
-	}
-
-	tick_report = zlet_tick_start(K_MSEC(500));
-	if (ZEPHLET_CALL_OK(tick_report)) {
-		printk("Tick is %srunning\n", tick_report.status.is_running ? "" : "not ");
+	if (tick_start(&tick_instance, &st, K_MSEC(500)) == 0) {
+		printk("Tick is %srunning\n", st.is_running ? "" : "not ");
 	}
 
 	k_sleep(K_SECONDS(5));
 
-	zlet_tick_stop(K_MSEC(500));
+	(void)tick_stop(&tick_instance, NULL, K_MSEC(500));
 
-	zlet_tampering_start(K_FOREVER);
+	(void)tampering_start(&tampering_instance, NULL, K_FOREVER);
+	(void)tampering_force_tampering(&tampering_instance, K_MSEC(250));
+	(void)tampering_stop(&tampering_instance, NULL, K_FOREVER);
 
-	zlet_tampering_force_tampering(K_MSEC(250));
-
-	zlet_tampering_stop(K_FOREVER);
-
-	zlet_ui_stop(K_MSEC(500));
+	(void)ui_stop(&ui_instance, NULL, K_MSEC(500));
 	return 0;
 }

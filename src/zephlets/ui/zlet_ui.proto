@@ -3,17 +3,9 @@ syntax = "proto3";
 import "nanopb.proto";
 import "zephlet.proto";
 
-option (nanopb_fileopt).anonymous_oneof = true;
 option (nanopb_fileopt).long_names = false;
 
 message Ui {
-  enum BuzzerTone {
-    BUZZER_TONE_1 = 0;
-    BUZZER_TONE_2 = 1;
-    BUZZER_TONE_3 = 2;
-    BUZZER_TONE_4 = 3;
-  }
-
   enum UserButtonEvents {
     USER_BUTTON_EVENT_NONE = 0;
     USER_BUTTON_EVENT_PRESSED = 1;
@@ -21,21 +13,28 @@ message Ui {
     USER_BUTTON_EVENT_LONG_PRESSED = 3;
   }
 
-  /* Runtime settings. Every field MUST be `optional` so update_settings
-   * can apply partial merges via nanopb has_<field> flags. */
-  message Settings {
-    optional int32 user_button_long_press_duration = 1;
+  message Config {
+    uint32 user_button_long_press_duration = 1;
   }
 
   message Events {
     int32 timestamp = 1;
-    optional uint32 blink = 2;
-    optional UserButtonEvents user_button_event = 3;
+    uint32 blink = 2;
+    UserButtonEvents user_button_event = 3;
   }
 }
 
-service UI {
-  option (zephlet.extends_base) = true; /* Extends base zlet */
-  rpc blink(Empty) returns (Empty);
-  rpc buzzer_play(Ui.BuzzerTone) returns (Empty);
+/*
+ * Service is informational in v0.3 — nanopb does not generate code for it.
+ * Method ids are allocated in declaration order starting at 1.
+ * buzzer_play is deferred — the current generator does not yet support
+ * enum-typed RPC inputs; will return as a nested-message input when added.
+ */
+service UiApi {
+  rpc start      (Empty)      returns (Lifecycle.Status);
+  rpc stop       (Empty)      returns (Lifecycle.Status);
+  rpc get_status (Empty)      returns (Lifecycle.Status);
+  rpc config     (Ui.Config)  returns (Ui.Config);
+  rpc get_config (Empty)      returns (Ui.Config);
+  rpc blink      (Empty)      returns (Empty);
 }
