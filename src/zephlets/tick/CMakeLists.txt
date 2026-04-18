@@ -1,35 +1,22 @@
 if(CONFIG_ZEPHLET_TICK)
-    # Generate full proto from schema + base proto → build dir
-    zephyr_zephlet_generate_proto(zlet_tick
-        "${ZEPHYR_SHARED_ZEPHLET_MODULE_DIR}/zephlet.proto"
+    # Register hand-written proto file for nanopb (consumed by the app
+    # CMakeLists via PROTO_FILES_LIST). Codegen is disabled for tick
+    # during Phase 2; the generator will reproduce this wiring in Phase 3.
+    set_property(GLOBAL APPEND PROPERTY PROTO_FILES_LIST
         "${ZEPHYR_ZLET_TICK_MODULE_DIR}/zlet_tick.proto")
 
-    # Register generated proto for nanopb
-    set_property(GLOBAL APPEND PROPERTY PROTO_FILES_LIST
-        "${zlet_tick_GENERATED_PROTO}")
-
-    # Auto-generate zephlet infrastructure from generated proto
-    zephyr_zephlet_generate(zlet_tick "${zlet_tick_GENERATED_PROTO}")
-    add_dependencies(zlet_tick_codegen zlet_tick_proto_gen)
-
-    # Expose build directory globally for zephlet headers
-    zephyr_include_directories("${CMAKE_CURRENT_BINARY_DIR}")
-
-    # Interface library with include paths
-    zephyr_interface_library_named(zlet_tick)
-    target_include_directories(zlet_tick INTERFACE
-        ${ZEPHYR_ZLET_TICK_MODULE_DIR}           # Source (for _impl.c)
-        "${CMAKE_CURRENT_BINARY_DIR}"               # Build (for .h/.c/.priv.h)
-        "${CMAKE_BINARY_DIR}/zephlets"              # Build parent (for .pb.h)
+    # Expose tick's source directory (for zlet_tick_interface.h) and the
+    # nanopb output parent directory (for "tick/zlet_tick.pb.h") globally
+    # so the test / app target can include them.
+    zephyr_include_directories(
+        ${ZEPHYR_ZLET_TICK_MODULE_DIR}
+        ${CMAKE_BINARY_DIR}
     )
 
-    # Add sources: generated (build) + implementation (source)
+    # Compile the hand-written interface + implementation.
     zephyr_library()
     zephyr_library_sources(
-        ${zlet_tick_GENERATED_C}
         ${ZEPHYR_ZLET_TICK_MODULE_DIR}/zlet_tick.c
+        ${ZEPHYR_ZLET_TICK_MODULE_DIR}/zlet_tick_interface.c
     )
-
-    add_dependencies(${ZEPHYR_CURRENT_LIBRARY} zlet_tick_codegen)
-    zephyr_library_link_libraries(zlet_tick)
 endif()
