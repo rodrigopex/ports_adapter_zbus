@@ -1,151 +1,78 @@
-# Ports & Adapters on Zephyr RTOS
+# Ports & Adapters on Zephyr RTOS (zephlet v0.3 example)
 
-## Overview
+Reference app for the [zephlet](https://github.com/rodrigopex/zephlet) framework. Three domain-isolated zephlets (tick, ui, tampering) talk exclusively over zbus, composed into behavior by a 40-line `src/adapters.c`.
 
-Implementation of the Ports & Adapters architectural pattern on Zephyr RTOS using zbus for inter-component communication. Demonstrates loose coupling, domain isolation, and composition through channel bridging.
+## Model
 
-## Architecture
+Each zephlet **instance** owns two zbus channels:
 
-**Components:**
+- **`rpc`** — pointer channel, synchronous. `<type>_<rpc>(z, [req], [resp], timeout)` wrappers invoke the dispatcher in the caller's thread and return the handler's rc directly.
+- **`events`** — zbus value-typed channel, asynchronous. Producers call `<type>_emit(z, &ev, timeout)`; consumers use the framework's `ZEPHLET_EVENTS_LISTENER(instance, type, callback)` macro (work-queue-backed).
 
-1. **Zephlets** (`src/zephlets/`): Domain logic modules with no direct dependencies
-2. **Adapters** (`src/adapters/`): Compose zephlets via channel bridging
-3. **Main** (`src/main.c`): Lifecycle orchestration
+Instances are declared with `ZEPHLET_DEFINE(type, name, cfg, data, init)` and auto-discovered at boot via `STRUCT_SECTION_ITERABLE`. Multiple instances per type are supported.
 
-**Two-Channel Pattern:**
+## Components
 
-Each zephlet exposes two zbus channels:
+- `src/zephlets/tick/` — k_timer → periodic `tick_events` with timestamp.
+- `src/zephlets/ui/` — `blink` RPC increments a counter and emits `ui_events`.
+- `src/zephlets/tampering/` — `force_tampering` RPC emits `tampering_events` with `proximity_tamper_detected=true`.
+- `src/adapters.c` — two `ZEPHLET_EVENTS_LISTENER` blocks wiring tick + tampering events to `ui_blink`.
+- `src/main.c` — instantiates one of each (`tick_instance`, `ui_instance`, `tampering_instance`) and drives lifecycle.
 
-- `chan_<zephlet>_invoke`: Receives commands (START, STOP, CONFIG, get_status, get_config, custom commands)
-- `chan_<zephlet>_report`: Publishes status updates and events
+## Build & run (mps2/an385 / QEMU)
 
-Zephlets listen to invoke channels (sync/async), execute logic, and publish to report channels. Adapters listen to report channels and invoke other zephlets, creating composition without direct coupling.
+```bash
+west init -l .
+west update --narrow --fetch-opt=--depth=1
+west packages pip --install
 
-**Code Generation:**
-
-Protobuf definitions (`zlet_<name>.proto`) drive automatic generation of interfaces, channels, dispatchers, and API skeletons via `generate_zephlet.py`. Business logic resides in hand-written `zlet_<name>.c` files.
-
-## Current Components
-
-**Zephlets:**
-
-- `shared`: Common types (`Empty`, `MsgZephletStatus`), `ZEPHLET_IMPL_REGISTER()` macro
-- `tick`: Fully implemented - K_TIMER-based timed events with spinlock protection
-- `ui`: Generated template (pending implementation)
-
-**Adapters:**
-
-- Base logging: `base_adapter.c` registers shared logging module for all adapters
-- `Tick+Ui_zlet_adapter.c`: Fully implemented - listens to tick reports, invokes ui blink
-
-## Build Commands
-
-Uses `just` for builds (target: mps2/an385). For zephlet/adapter creation, use `west zephlet` commands directly.
-
-```console
-just b              # Build
-just c b            # Clean build
-just b r            # Build and run
-just c b r          # Clean build and run
-just config         # Menuconfig
-just ds             # Device tree symbols
-just da             # Device tree addresses
+just c b r   # clean, build, run under qemu
+just test    # twister — tick + ui + tampering integration suites
 ```
 
-**Code Generation:**
+Expected output excerpt:
 
-```console
-west zephlet gen <zephlet>   # Regenerate interfaces (requires build/modules/<zephlet>_zephlet, run from any directory)
+```
+Example project running on a mps2/an385 board.
+UI is running
+Tick is running
+<dbg> adapters: on_tick_event: tick event @1000 -> ui_blink
+<inf> zlet_ui: ui_instance: blink #1
+...
+<dbg> adapters: on_tampering_event: tampering proximity @5010 -> ui_blink
+<inf> zlet_ui: ui_instance: blink #6
 ```
 
-**Testing:**
+## Why look at this
 
-```console
-just test_unit                     # Run unit tests
-just test_integration             # Run integration tests
-just test_zephlet tick            # Run tick zephlet integration tests
-```
-
-**Integration Tests:**
-
-Each zephlet includes `tests/integration/` with 6 core lifecycle tests:
-
-- start, stop, get_status, lifecycle cycle
-- Config tests (get_config, config) if zephlet has config
-- Run via: `just test_zephlet <zephlet_name>`
-- Example: `just test_zephlet tick` runs tick's integration tests
-
-## Workflows
-
-**Creating Zephlets:**
-
-```console
-west zephlet new [-n NAME] [-d DESC] [-a AUTHOR]
-```
-
-Interactive/non-interactive. Edit .proto (Config/Events/RPCs), run `just b` to bootstrap .c, implement TODOs, add to root CMakeLists EXTRA_ZEPHYR_MODULES, enable CONFIG_ZEPHLET_<ZEPHLET>=y, rebuild.
-
-**Creating Adapters:**
-
-```console
-west zephlet new-adapter [-o ORIGIN] [-d DEST] [-i]
-```
-
-Interactive (-i) field selection or non-interactive (all fields). Auto-generates adapter.c, updates Kconfig/CMakeLists. Implement TODOs, rebuild. Auto-enabled via CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=y.
-
-## Key Concepts
-
-**Lifecycle Pattern:**
-
-All zephlets support standard commands: START, STOP, get_status, get_config, config. Custom commands extend beyond reserved field numbers (Invoke 7+, Report 4+).
-
-**Protobuf (nanopb):**
-
-Messages follow `MsgZlet<Zephlet>` pattern with Config, Events, Invoke (oneof), Report (oneof) fields. Import "zephlet.proto" for shared types. Use `option (nanopb_fileopt).anonymous_oneof = true`.
-
-**Thread Safety:**
-
-Zephlet state protected by K_SPINLOCK. All state modifications acquire spinlock.
-
-**Naming Conventions:**
-
-| Element           | Pattern                   | Example                          |
-|-------------------|---------------------------|----------------------------------|
-| Source files      | zlet_<name>.{proto,c}     | zlet_tick.proto, zlet_tick.c     |
-| Generated files   | zlet_<name>_interface.h/c | zlet_tick_interface.h            |
-| Adapter files     | <Origin>+<Dest>_adapter.c | Tick+Ui_zlet_adapter.c           |
-| Channels          | chan_<zephlet>_{invoke\|report} | chan_tick_invoke           |
-| Config            | CONFIG_ZEPHLET_<ZEPHLET>  | CONFIG_ZEPHLET_TICK              |
-
-**Data Flow:**
-
-1. **Init:** init_fn registers implementation via `ZEPHLET_IMPL_REGISTER()`
-2. **Start:** Inline function publishes to invoke channel
-3. **Dispatch:** Dispatcher routes to API function pointer
-4. **Execute:** API function updates state under spinlock, publishes to report channel
-5. **Compose:** Adapter listeners observe reports, invoke other zephlets
+- Pure **domain isolation**: zephlets don't `#include` each other. Wiring happens only in `main.c` (instance definitions) and `adapters.c` (event subscriptions).
+- **Sync RPC without gymnastics**: pointer-in-channel + zbus sync-listener gives identity-equals-address and in-place mutation in the caller's thread.
+- **No framework-mandated layout**: the `src/zephlets/` and `src/adapters.c` paths are *this app's* choice; the zephlet framework takes no position.
 
 ## Configuration
 
-Enable zephlets in `prj.conf`:
+`prj.conf`:
 
-```kconfig
-CONFIG_ZEPHLET_<ZEPHLET>=y
-CONFIG_ZEPHLET_<ZEPHLET>_LOG_LEVEL_DBG=y
+```
+CONFIG_ZEPHLET_TICK=y
+CONFIG_ZEPHLET_UI=y
+CONFIG_ZEPHLET_TAMPERING=y
+CONFIG_LOG=y
+CONFIG_ZEPHLET_TICK_LOG_LEVEL_DBG=y
+CONFIG_ZEPHLET_UI_LOG_LEVEL_DBG=y
+CONFIG_ZEPHLET_TAMPERING_LOG_LEVEL_DBG=y
+CONFIG_ASSERT=y
 ```
 
-**Adapter Dependencies:** Both origin and destination zephlets must be enabled for adapter to function.
+No adapter Kconfig — `src/adapters.c` is unconditional app code. In projects where the adapter targets optional zephlets, the user guards at CMake level (`if(CONFIG_ZEPHLET_X AND CONFIG_ZEPHLET_Y) target_sources(...)`).
 
-**Adapters:** Enabled by default when generated. To disable a specific adapter:
+## Reference
 
-```kconfig
-CONFIG_<ORIGIN>_TO_<DEST>_ADAPTER=n
-```
+- Framework: [`../modules/lib/zephlet/`](../modules/lib/zephlet/) (via `west.yml`).
+  - [`CLAUDE.md`](../modules/lib/zephlet/CLAUDE.md) — full architecture reference.
+  - [`README.md`](../modules/lib/zephlet/README.md) — quick start.
+- Full v0.3 refactor plan: [`docs/REFACTOR_V3_PLAN.md`](docs/REFACTOR_V3_PLAN.md).
 
-**Current Configuration:** All zephlets enabled with debug logging (CONFIG_ZEPHLET_*_LOG_LEVEL_DBG=y). All generated adapters enabled.
+## License
 
-## References
-
-See `CLAUDE.md` for detailed architecture documentation, build system internals, code generation details, and development principles.
-
-Underlying build system: `west build -d ./build -b mps2/an385 .`
+Apache-2.0
