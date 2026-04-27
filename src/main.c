@@ -17,71 +17,72 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 /* ----- Instance storage + compile-time config ------------------------- */
 
-static struct tick_data tick_storage;
-static struct ui_data ui_storage;
-static struct tampering_data tampering_storage;
-
 static const struct tick_config tick_cfg = {
 	.period_ms = 1000,
 	.max_period_ms = 60000,
 };
+static struct tick_data tick_data_storage;
+ZEPHLET_DEFINE(tick, tick_timer_based_impl, &tick_cfg, &tick_data_storage, tick_init_fn);
+
 static const struct ui_config ui_cfg = {
 	.user_button_long_press_duration = 1000,
 };
+static struct ui_data ui_data_storage;
+ZEPHLET_DEFINE(ui, ui_fake_impl, &ui_cfg, &ui_data_storage, ui_init_fn);
+
 static const struct tampering_config tampering_cfg = {
 	.light_tamper_threshold = 100,
 	.proximity_tamper_threshold = 50,
 };
-
-ZEPHLET_DEFINE(tick, tick_base, &tick_cfg, &tick_storage, tick_init_fn);
-ZEPHLET_DEFINE(ui, z_ui, &ui_cfg, &ui_storage, ui_init_fn);
-ZEPHLET_DEFINE(tampering, tampering_service, &tampering_cfg, &tampering_storage, tampering_init_fn);
+static struct tampering_data tampering_data_storage;
+ZEPHLET_DEFINE(tampering, tampering_emul_impl, &tampering_cfg, &tampering_data_storage,
+	       tampering_init_fn);
 
 int main(void)
 {
 	printk("Example project running on a %s board.\n", CONFIG_BOARD_TARGET);
 
-	if (!tick_is_ready(&tick_base)) {
+	if (!tick_is_ready(&tick_timer_based_impl)) {
 		LOG_ERR("Tick not ready");
 		return -ENODEV;
 	}
-	if (!ui_is_ready(&z_ui)) {
+	if (!ui_is_ready(&ui_fake_impl)) {
 		LOG_ERR("UI not ready");
 		return -ENODEV;
 	}
-	if (!tampering_is_ready(&tampering_service)) {
+	if (!tampering_is_ready(&tampering_emul_impl)) {
 		LOG_ERR("Tampering not ready");
 		return -ENODEV;
 	}
 
-	struct tick_config tick_now = {0};
-	if (tick_get_config(&tick_base, &tick_now, K_MSEC(500)) == 0) {
-		printk("Tick config: period_ms=%u\n", tick_now.period_ms);
+	struct tick_config tick_config_now = {0};
+	if (tick_get_config(&tick_timer_based_impl, &tick_config_now, K_MSEC(500)) == 0) {
+		printk("Tick config: period_ms=%u\n", tick_config_now.period_ms);
 	}
 
 	struct tick_config tick_new = {.period_ms = 1000, .max_period_ms = 60000};
-	if (tick_config(&tick_base, &tick_new, NULL, K_MSEC(500)) == 0) {
+	if (tick_config(&tick_timer_based_impl, &tick_new, NULL, K_MSEC(500)) == 0) {
 		printk("Tick config updated, period_ms=%u\n", tick_new.period_ms);
 	}
 
 	struct lifecycle_status st = {0};
 
-	if (ui_start(&z_ui, &st, K_MSEC(500)) == 0) {
+	if (ui_start(&ui_fake_impl, &st, K_MSEC(500)) == 0) {
 		printk("UI is %srunning\n", st.is_running ? "" : "not ");
 	}
 
-	if (tick_start(&tick_base, &st, K_MSEC(500)) == 0) {
+	if (tick_start(&tick_timer_based_impl, &st, K_MSEC(500)) == 0) {
 		printk("Tick is %srunning\n", st.is_running ? "" : "not ");
 	}
 
 	k_sleep(K_SECONDS(5));
 
-	(void)tick_stop(&tick_base, NULL, K_MSEC(500));
+	(void)tick_stop(&tick_timer_based_impl, NULL, K_MSEC(500));
 
-	(void)tampering_start(&tampering_service, NULL, K_FOREVER);
-	(void)tampering_force_tampering(&tampering_service, K_MSEC(250));
-	(void)tampering_stop(&tampering_service, NULL, K_FOREVER);
+	(void)tampering_start(&tampering_emul_impl, NULL, K_FOREVER);
+	(void)tampering_force_tampering(&tampering_emul_impl, K_MSEC(250));
+	(void)tampering_stop(&tampering_emul_impl, NULL, K_FOREVER);
 
-	(void)ui_stop(&z_ui, NULL, K_MSEC(500));
+	(void)ui_stop(&ui_fake_impl, NULL, K_MSEC(500));
 	return 0;
 }

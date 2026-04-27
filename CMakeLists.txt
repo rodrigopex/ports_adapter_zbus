@@ -32,4 +32,4 @@ set(CMAKE_CURRENT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/src")
 zephyr_nanopb_sources(app ${LOCAL_PROTO_FILES_LIST})
 set(CMAKE_CURRENT_SOURCE_DIR ${SAVED_CMAKE_CURRENT_SOURCE_DIR})
 
-target_sources(app PRIVATE src/main.c src/adapters.c)
+target_sources(app PRIVATE src/main.c src/policies.c)
