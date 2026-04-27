@@ -28,8 +28,9 @@ static atomic_t event_count;
 static struct tampering_events last_event;
 static K_SEM_DEFINE(event_sem, 0, 10);
 
-static void on_tampering_event(const struct tampering_events *ev)
+static void on_tampering_event(const struct zephlet *z, const struct tampering_events *ev)
 {
+	ARG_UNUSED(z);
 	last_event = *ev;
 	atomic_inc(&event_count);
 	k_sem_give(&event_sem);

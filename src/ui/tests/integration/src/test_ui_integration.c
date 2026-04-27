@@ -26,8 +26,9 @@ static atomic_t event_count;
 static struct ui_events last_event;
 static K_SEM_DEFINE(event_sem, 0, 20);
 
-static void on_ui_event(const struct ui_events *ev)
+static void on_ui_event(const struct zephlet *z, const struct ui_events *ev)
 {
+	ARG_UNUSED(z);
 	last_event = *ev;
 	atomic_inc(&event_count);
 	k_sem_give(&event_sem);

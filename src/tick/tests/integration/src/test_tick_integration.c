@@ -35,15 +35,17 @@ static atomic_t slow_event_count;
 static K_SEM_DEFINE(fast_event_sem, 0, 100);
 static K_SEM_DEFINE(slow_event_sem, 0, 100);
 
-static void on_fast_tick(const struct tick_events *ev)
+static void on_fast_tick(const struct zephlet *z, const struct tick_events *ev)
 {
+	ARG_UNUSED(z);
 	ARG_UNUSED(ev);
 	atomic_inc(&fast_event_count);
 	k_sem_give(&fast_event_sem);
 }
 
-static void on_slow_tick(const struct tick_events *ev)
+static void on_slow_tick(const struct zephlet *z, const struct tick_events *ev)
 {
+	ARG_UNUSED(z);
 	ARG_UNUSED(ev);
 	atomic_inc(&slow_event_count);
 	k_sem_give(&slow_event_sem);
