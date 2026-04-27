@@ -14,13 +14,13 @@
 /* ----- Test instance -------------------------------------------------- */
 
 static struct tampering_data tampering_test_data;
-static const struct tampering_config tampering_test_cfg = {
+static struct tampering_config tampering_test_cfg = {
 	.light_tamper_threshold = 100,
 	.proximity_tamper_threshold = 50,
 };
 
-ZEPHLET_DEFINE(tampering, tampering_test, &tampering_test_cfg, &tampering_test_data,
-	       tampering_init_fn);
+ZEPHLET_NEW(tampering, tampering_test, &tampering_test_cfg, &tampering_test_data,
+		    tampering_init_fn);
 
 /* ----- Event observer ------------------------------------------------- */
 

@@ -7,7 +7,7 @@
 
 LOG_MODULE_DECLARE(zlet_tampering, CONFIG_ZEPHLET_TAMPERING_LOG_LEVEL);
 
-int tampering_on_start(const struct zephlet *z, struct lifecycle_status *resp)
+int tampering_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tampering_data *d = z->data;
 
@@ -26,7 +26,7 @@ int tampering_on_start(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int tampering_on_stop(const struct zephlet *z, struct lifecycle_status *resp)
+int tampering_stop_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tampering_data *d = z->data;
 
@@ -42,7 +42,7 @@ int tampering_on_stop(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int tampering_on_get_status(const struct zephlet *z, struct lifecycle_status *resp)
+int tampering_get_status_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tampering_data *d = z->data;
 
@@ -53,29 +53,29 @@ int tampering_on_get_status(const struct zephlet *z, struct lifecycle_status *re
 	return 0;
 }
 
-int tampering_on_config(const struct zephlet *z, const struct tampering_config *req,
-			struct tampering_config *resp)
+int tampering_config_impl(const struct zephlet *z, const struct tampering_config *req,
+			  struct tampering_config *resp)
 {
-	struct tampering_data *d = z->data;
+	struct tampering_config *cfg = z->config;
 
-	d->current_config = *req;
+	*cfg = *req;
 	if (resp != NULL) {
-		*resp = d->current_config;
+		*resp = *cfg;
 	}
 	return 0;
 }
 
-int tampering_on_get_config(const struct zephlet *z, struct tampering_config *resp)
+int tampering_get_config_impl(const struct zephlet *z, struct tampering_config *resp)
 {
-	struct tampering_data *d = z->data;
+	struct tampering_config *cfg = z->config;
 
 	if (resp != NULL) {
-		*resp = d->current_config;
+		*resp = *cfg;
 	}
 	return 0;
 }
 
-int tampering_on_force_tampering(const struct zephlet *z)
+int tampering_force_tampering_impl(const struct zephlet *z)
 {
 	struct tampering_events ev = {
 		.timestamp = (int32_t)k_uptime_get(),
@@ -88,11 +88,7 @@ int tampering_on_force_tampering(const struct zephlet *z)
 int tampering_init_fn(const struct zephlet *z)
 {
 	struct tampering_data *d = z->data;
-	const struct tampering_config *cfg = z->config;
 
-	if (cfg != NULL) {
-		d->current_config = *cfg;
-	}
 	d->is_running = false;
 	d->is_ready = true;
 

@@ -7,7 +7,7 @@
 
 LOG_MODULE_DECLARE(zlet_ui, CONFIG_ZEPHLET_UI_LOG_LEVEL);
 
-int ui_on_start(const struct zephlet *z, struct lifecycle_status *resp)
+int ui_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct ui_data *d = z->data;
 
@@ -26,7 +26,7 @@ int ui_on_start(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int ui_on_stop(const struct zephlet *z, struct lifecycle_status *resp)
+int ui_stop_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct ui_data *d = z->data;
 
@@ -42,7 +42,7 @@ int ui_on_stop(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int ui_on_get_status(const struct zephlet *z, struct lifecycle_status *resp)
+int ui_get_status_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct ui_data *d = z->data;
 
@@ -53,28 +53,28 @@ int ui_on_get_status(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int ui_on_config(const struct zephlet *z, const struct ui_config *req, struct ui_config *resp)
+int ui_config_impl(const struct zephlet *z, const struct ui_config *req, struct ui_config *resp)
 {
-	struct ui_data *d = z->data;
+	struct ui_config *cfg = z->config;
 
-	d->current_config = *req;
+	*cfg = *req;
 	if (resp != NULL) {
-		*resp = d->current_config;
+		*resp = *cfg;
 	}
 	return 0;
 }
 
-int ui_on_get_config(const struct zephlet *z, struct ui_config *resp)
+int ui_get_config_impl(const struct zephlet *z, struct ui_config *resp)
 {
-	struct ui_data *d = z->data;
+	struct ui_config *cfg = z->config;
 
 	if (resp != NULL) {
-		*resp = d->current_config;
+		*resp = *cfg;
 	}
 	return 0;
 }
 
-int ui_on_blink(const struct zephlet *z)
+int ui_blink_impl(const struct zephlet *z)
 {
 	struct ui_data *d = z->data;
 
@@ -90,11 +90,7 @@ int ui_on_blink(const struct zephlet *z)
 int ui_init_fn(const struct zephlet *z)
 {
 	struct ui_data *d = z->data;
-	const struct ui_config *cfg = z->config;
 
-	if (cfg != NULL) {
-		d->current_config = *cfg;
-	}
 	d->is_running = false;
 	d->is_ready = true;
 	d->blink_counter = 0;

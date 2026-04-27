@@ -30,9 +30,10 @@ static int validate_config(const struct tick_config *c)
 
 /* ----- Strong handler overrides --------------------------------------- */
 
-int tick_on_start(const struct zephlet *z, struct lifecycle_status *resp)
+int tick_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tick_data *d = z->data;
+	struct tick_config *cfg = z->config;
 
 	if (!d->is_ready) {
 		if (resp != NULL) {
@@ -49,19 +50,18 @@ int tick_on_start(const struct zephlet *z, struct lifecycle_status *resp)
 		return -EALREADY;
 	}
 
-	k_timer_start(&d->timer, K_MSEC(d->current_config.period_ms),
-		      K_MSEC(d->current_config.period_ms));
+	k_timer_start(&d->timer, K_MSEC(cfg->period_ms), K_MSEC(cfg->period_ms));
 	d->is_running = true;
 
 	if (resp != NULL) {
 		resp->is_running = true;
 		resp->is_ready = true;
 	}
-	LOG_DBG("%s: started (period=%u ms)", z->name, d->current_config.period_ms);
+	LOG_DBG("%s: started (period=%u ms)", z->name, cfg->period_ms);
 	return 0;
 }
 
-int tick_on_stop(const struct zephlet *z, struct lifecycle_status *resp)
+int tick_stop_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tick_data *d = z->data;
 
@@ -84,7 +84,7 @@ int tick_on_stop(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int tick_on_get_status(const struct zephlet *z, struct lifecycle_status *resp)
+int tick_get_status_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tick_data *d = z->data;
 
@@ -95,40 +95,40 @@ int tick_on_get_status(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int tick_on_config(const struct zephlet *z, const struct tick_config *req,
-		   struct tick_config *resp)
+int tick_config_impl(const struct zephlet *z, const struct tick_config *req,
+		     struct tick_config *resp)
 {
 	struct tick_data *d = z->data;
+	struct tick_config *cfg = z->config;
 	int err = validate_config(req);
 
 	if (err != 0) {
 		if (resp != NULL) {
-			*resp = d->current_config;
+			*resp = *cfg;
 		}
 		return err;
 	}
 
-	d->current_config = *req;
+	*cfg = *req;
 
 	if (d->is_running) {
 		k_timer_stop(&d->timer);
-		k_timer_start(&d->timer, K_MSEC(d->current_config.period_ms),
-			      K_MSEC(d->current_config.period_ms));
+		k_timer_start(&d->timer, K_MSEC(cfg->period_ms), K_MSEC(cfg->period_ms));
 	}
 
 	if (resp != NULL) {
-		*resp = d->current_config;
+		*resp = *cfg;
 	}
-	LOG_DBG("%s: reconfigured (period=%u ms)", z->name, d->current_config.period_ms);
+	LOG_DBG("%s: reconfigured (period=%u ms)", z->name, cfg->period_ms);
 	return 0;
 }
 
-int tick_on_get_config(const struct zephlet *z, struct tick_config *resp)
+int tick_get_config_impl(const struct zephlet *z, struct tick_config *resp)
 {
-	struct tick_data *d = z->data;
+	struct tick_config *cfg = z->config;
 
 	if (resp != NULL) {
-		*resp = d->current_config;
+		*resp = *cfg;
 	}
 	return 0;
 }
@@ -138,14 +138,7 @@ int tick_on_get_config(const struct zephlet *z, struct tick_config *resp)
 int tick_init_fn(const struct zephlet *self)
 {
 	struct tick_data *d = self->data;
-	const struct tick_config *cfg = self->config;
-
-	if (cfg != NULL) {
-		d->current_config = *cfg;
-	} else {
-		d->current_config.period_ms = 1000;
-		d->current_config.max_period_ms = 60000;
-	}
+	struct tick_config *cfg = self->config;
 
 	k_timer_init(&d->timer, tick_timer_handler, NULL);
 	k_timer_user_data_set(&d->timer, (void *)self);
@@ -153,6 +146,6 @@ int tick_init_fn(const struct zephlet *self)
 	d->is_running = false;
 	d->is_ready = true;
 
-	LOG_INF("%s: init (period=%u ms)", self->name, d->current_config.period_ms);
+	LOG_INF("%s: init (period=%u ms)", self->name, cfg->period_ms);
 	return 0;
 }

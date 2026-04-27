@@ -17,7 +17,7 @@
 
 LOG_MODULE_REGISTER(policies, LOG_LEVEL_DBG);
 
-/* Instances are defined (via ZEPHLET_DEFINE) in main.c. */
+/* Instances are defined (via ZEPHLET_NEW) in main.c. */
 extern const struct zephlet ui_fake_impl;
 
 static void on_tick_event(const struct tick_events *ev)

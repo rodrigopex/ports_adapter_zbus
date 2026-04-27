@@ -20,7 +20,6 @@ struct ui_data {
 	/* ----- Framework-standard fields (keep first, in this order) ----- */
 	bool is_running;
 	bool is_ready;
-	struct ui_config current_config;
 	/* ----- Custom fields below ----- */
 	uint32_t blink_counter;
 };

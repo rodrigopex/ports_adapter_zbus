@@ -11,22 +11,22 @@
 
 #include "zlet_tick.h"
 
-/* ----- Two tick instances with distinct compile-time configs. -------- */
+/* ----- Two tick instances with distinct initial configs. ------------- */
 
 static struct tick_data tick_fast_data;
 static struct tick_data tick_slow_data;
 
-static const struct tick_config tick_fast_cfg = {
+static struct tick_config tick_fast_cfg = {
 	.period_ms = 100,
 	.max_period_ms = 60000,
 };
-static const struct tick_config tick_slow_cfg = {
+static struct tick_config tick_slow_cfg = {
 	.period_ms = 500,
 	.max_period_ms = 60000,
 };
 
-ZEPHLET_DEFINE(tick, tick_fast, &tick_fast_cfg, &tick_fast_data, tick_init_fn);
-ZEPHLET_DEFINE(tick, tick_slow, &tick_slow_cfg, &tick_slow_data, tick_init_fn);
+ZEPHLET_NEW(tick, tick_fast, &tick_fast_cfg, &tick_fast_data, tick_init_fn);
+ZEPHLET_NEW(tick, tick_slow, &tick_slow_cfg, &tick_slow_data, tick_init_fn);
 
 /* ----- Per-instance event observers --------------------------------- */
 

@@ -14,11 +14,11 @@
 /* ----- Test instance -------------------------------------------------- */
 
 static struct ui_data ui_test_data;
-static const struct ui_config ui_test_cfg = {
+static struct ui_config ui_test_cfg = {
 	.user_button_long_press_duration = 1000,
 };
 
-ZEPHLET_DEFINE(ui, ui_test, &ui_test_cfg, &ui_test_data, ui_init_fn);
+ZEPHLET_NEW(ui, ui_test, &ui_test_cfg, &ui_test_data, ui_init_fn);
 
 /* ----- Event observer ------------------------------------------------- */
 

@@ -1,23 +1,23 @@
 # Ports & Adapters on Zephyr RTOS (zephlet v0.3 example)
 
-Reference app for the [zephlet](https://github.com/rodrigopex/zephlet) framework. Three domain-isolated zephlets (tick, ui, tampering) talk exclusively over zbus, composed into behavior by a 40-line `src/adapters.c`.
+Reference app for the [zephlet](https://github.com/rodrigopex/zephlet) framework. Three domain-isolated zephlets (tick, ui, tampering) talk exclusively over zbus, composed into behavior by a 40-line `src/policies.c`.
 
 ## Model
 
 Each zephlet **instance** owns two zbus channels:
 
-- **`rpc`** — pointer channel, synchronous. `<type>_<rpc>(z, [req], [resp], timeout)` wrappers invoke the dispatcher in the caller's thread and return the handler's rc directly.
+- **`command`** — pointer channel, synchronous. `<type>_<cmd>(z, [req], [resp], timeout)` wrappers invoke the dispatcher in the caller's thread and return the handler's rc directly.
 - **`events`** — zbus value-typed channel, asynchronous. Producers call `<type>_emit(z, &ev, timeout)`; consumers use the framework's `ZEPHLET_EVENTS_LISTENER(instance, type, callback)` macro (work-queue-backed).
 
-Instances are declared with `ZEPHLET_DEFINE(type, name, cfg, data, init)` and auto-discovered at boot via `STRUCT_SECTION_ITERABLE`. Multiple instances per type are supported.
+Instances are declared with `ZEPHLET_NEW(type, name, cfg, data, init)` and auto-discovered at boot via `STRUCT_SECTION_ITERABLE`. Multiple instances per type are supported.
 
 ## Components
 
 - `src/tick/` — k_timer → periodic `tick_events` with timestamp.
-- `src/ui/` — `blink` RPC increments a counter and emits `ui_events`.
-- `src/tampering/` — `force_tampering` RPC emits `tampering_events` with `proximity_tamper_detected=true`.
-- `src/adapters.c` — two `ZEPHLET_EVENTS_LISTENER` blocks wiring tick + tampering events to `ui_blink`.
-- `src/main.c` — instantiates one of each (`tick_instance`, `ui_instance`, `tampering_instance`) and drives lifecycle.
+- `src/ui/` — `blink` command increments a counter and emits `ui_events`.
+- `src/tampering/` — `force_tampering` command emits `tampering_events` with `proximity_tamper_detected=true`.
+- `src/policies.c` — two `ZEPHLET_EVENTS_LISTENER` blocks wiring tick + tampering events to `ui_blink`.
+- `src/main.c` — instantiates one of each and drives lifecycle.
 
 ## Build & run (mps2/an385 / QEMU)
 
@@ -36,18 +36,18 @@ Expected output excerpt:
 Example project running on a mps2/an385 board.
 UI is running
 Tick is running
-<dbg> adapters: on_tick_event: tick event @1000 -> ui_blink
-<inf> zlet_ui: ui_instance: blink #1
+<dbg> policies: on_tick_event: tick event @1000 -> ui_blink
+<inf> zlet_ui: ui_fake_impl: blink #1
 ...
-<dbg> adapters: on_tampering_event: tampering proximity @5010 -> ui_blink
-<inf> zlet_ui: ui_instance: blink #6
+<dbg> policies: on_tampering_event: tampering proximity @5010 -> ui_blink
+<inf> zlet_ui: ui_fake_impl: blink #6
 ```
 
 ## Why look at this
 
-- Pure **domain isolation**: zephlets don't `#include` each other. Wiring happens only in `main.c` (instance definitions) and `adapters.c` (event subscriptions).
-- **Sync RPC without gymnastics**: pointer-in-channel + zbus sync-listener gives identity-equals-address and in-place mutation in the caller's thread.
-- **No framework-mandated layout**: this app's flat `src/<name>/` zephlet dirs and `src/adapters.c` are *this app's* choice; the zephlet framework takes no position.
+- Pure **domain isolation**: zephlets don't `#include` each other. Wiring happens only in `main.c` (instance definitions) and `policies.c` (event subscriptions).
+- **Sync command without gymnastics**: pointer-in-channel + zbus sync-listener gives identity-equals-address and in-place mutation in the caller's thread.
+- **No framework-mandated layout**: this app's flat `src/<name>/` zephlet dirs and `src/policies.c` are *this app's* choice; the zephlet framework takes no position.
 
 ## Configuration
 
@@ -64,7 +64,7 @@ CONFIG_ZEPHLET_TAMPERING_LOG_LEVEL_DBG=y
 CONFIG_ASSERT=y
 ```
 
-No adapter Kconfig — `src/adapters.c` is unconditional app code. In projects where the adapter targets optional zephlets, the user guards at CMake level (`if(CONFIG_ZEPHLET_X AND CONFIG_ZEPHLET_Y) target_sources(...)`).
+No policies Kconfig — `src/policies.c` is unconditional app code. In projects where the policy targets optional zephlets, the user guards at CMake level (`if(CONFIG_ZEPHLET_X AND CONFIG_ZEPHLET_Y) target_sources(...)`).
 
 ## Reference
 

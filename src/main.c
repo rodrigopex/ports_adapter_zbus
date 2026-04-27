@@ -15,28 +15,28 @@
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
-/* ----- Instance storage + compile-time config ------------------------- */
+/* ----- Instance storage + initial config ------------------------------ */
 
-static const struct tick_config tick_cfg = {
+static struct tick_config tick_cfg = {
 	.period_ms = 1000,
 	.max_period_ms = 60000,
 };
 static struct tick_data tick_data_storage;
-ZEPHLET_DEFINE(tick, tick_timer_based_impl, &tick_cfg, &tick_data_storage, tick_init_fn);
+ZEPHLET_NEW(tick, tick_timer_based_impl, &tick_cfg, &tick_data_storage, tick_init_fn);
 
-static const struct ui_config ui_cfg = {
+static struct ui_config ui_cfg = {
 	.user_button_long_press_duration = 1000,
 };
 static struct ui_data ui_data_storage;
-ZEPHLET_DEFINE(ui, ui_fake_impl, &ui_cfg, &ui_data_storage, ui_init_fn);
+ZEPHLET_NEW(ui, ui_fake_impl, &ui_cfg, &ui_data_storage, ui_init_fn);
 
-static const struct tampering_config tampering_cfg = {
+static struct tampering_config tampering_cfg = {
 	.light_tamper_threshold = 100,
 	.proximity_tamper_threshold = 50,
 };
 static struct tampering_data tampering_data_storage;
-ZEPHLET_DEFINE(tampering, tampering_emul_impl, &tampering_cfg, &tampering_data_storage,
-	       tampering_init_fn);
+ZEPHLET_NEW(tampering, tampering_emul_impl, &tampering_cfg, &tampering_data_storage,
+	    tampering_init_fn);
 
 int main(void)
 {

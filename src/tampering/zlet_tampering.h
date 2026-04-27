@@ -16,7 +16,6 @@ struct tampering_data {
 	/* ----- Framework-standard fields (keep first, in this order) ----- */
 	bool is_running;
 	bool is_ready;
-	struct tampering_config current_config;
 	/* ----- Custom fields below ----- */
 };
 
