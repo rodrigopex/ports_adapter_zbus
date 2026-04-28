@@ -31,10 +31,10 @@ message Ui {
  * enum-typed RPC inputs; will return as a nested-message input when added.
  */
 service UiApi {
-  rpc start      (Empty)      returns (Lifecycle.Status);
-  rpc stop       (Empty)      returns (Lifecycle.Status);
-  rpc get_status (Empty)      returns (Lifecycle.Status);
-  rpc config     (Ui.Config)  returns (Ui.Config);
-  rpc get_config (Empty)      returns (Ui.Config);
-  rpc blink      (Empty)      returns (Empty);
+  rpc start(Empty) returns (Lifecycle.Status);
+  rpc stop(Empty) returns (Lifecycle.Status);
+  rpc get_status(Empty) returns (Lifecycle.Status);
+  rpc config(Ui.Config) returns (Ui.Config);
+  rpc get_config(Empty) returns (Ui.Config);
+  rpc blink(Empty) returns (Empty);
 }

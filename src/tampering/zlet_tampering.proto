@@ -25,10 +25,10 @@ message Tampering {
  * not as the RPC's return value.
  */
 service TamperingApi {
-  rpc start           (Empty)             returns (Lifecycle.Status);
-  rpc stop            (Empty)             returns (Lifecycle.Status);
-  rpc get_status      (Empty)             returns (Lifecycle.Status);
-  rpc config          (Tampering.Config)  returns (Tampering.Config);
-  rpc get_config      (Empty)             returns (Tampering.Config);
-  rpc force_tampering (Empty)             returns (Empty);
+  rpc start(Empty) returns (Lifecycle.Status);
+  rpc stop(Empty) returns (Lifecycle.Status);
+  rpc get_status(Empty) returns (Lifecycle.Status);
+  rpc config(Tampering.Config) returns (Tampering.Config);
+  rpc get_config(Empty) returns (Tampering.Config);
+  rpc force_tampering(Empty) returns (Empty);
 }

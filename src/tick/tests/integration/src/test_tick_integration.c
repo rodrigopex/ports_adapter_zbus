@@ -17,12 +17,12 @@ static struct tick_data tick_fast_data;
 static struct tick_data tick_slow_data;
 
 static struct tick_config tick_fast_cfg = {
+	.duration_ms = 100,
 	.period_ms = 100,
-	.max_period_ms = 60000,
 };
 static struct tick_config tick_slow_cfg = {
+	.duration_ms = 500,
 	.period_ms = 500,
-	.max_period_ms = 60000,
 };
 
 ZEPHLET_NEW(tick, tick_fast, &tick_fast_cfg, &tick_fast_data, tick_init_fn);
@@ -73,8 +73,8 @@ static void reset(void *fixture)
 	(void)tick_stop(&tick_fast, NULL, K_MSEC(100));
 	(void)tick_stop(&tick_slow, NULL, K_MSEC(100));
 
-	struct tick_config fast_restore = {.period_ms = 100, .max_period_ms = 60000};
-	struct tick_config slow_restore = {.period_ms = 500, .max_period_ms = 60000};
+	struct tick_config fast_restore = {.duration_ms = 100, .period_ms = 100};
+	struct tick_config slow_restore = {.duration_ms = 500, .period_ms = 500};
 	(void)tick_config(&tick_fast, &fast_restore, NULL, K_MSEC(100));
 	(void)tick_config(&tick_slow, &slow_restore, NULL, K_MSEC(100));
 
@@ -111,28 +111,30 @@ ZTEST(tick_v03, test_start_already_running)
 
 ZTEST(tick_v03, test_config_roundtrip)
 {
-	struct tick_config req = {.period_ms = 250, .max_period_ms = 60000};
+	struct tick_config req = {.duration_ms = 250, .period_ms = 250};
 	struct tick_config resp = {0};
 
 	zassert_ok(tick_config(&tick_fast, &req, &resp, K_MSEC(100)));
 	zassert_equal(resp.period_ms, 250);
+	zassert_equal(resp.duration_ms, 250);
 
 	zassert_ok(tick_get_config(&tick_fast, &resp, K_MSEC(100)));
 	zassert_equal(resp.period_ms, 250);
+	zassert_equal(resp.duration_ms, 250);
 }
 
 ZTEST(tick_v03, test_config_invalid_zero_period)
 {
-	struct tick_config req = {.period_ms = 0, .max_period_ms = 60000};
+	struct tick_config req = {.duration_ms = 100, .period_ms = 0};
 	int rc = tick_config(&tick_fast, &req, NULL, K_MSEC(100));
 	zassert_equal(rc, -EINVAL, "period_ms=0 must be rejected, got %d", rc);
 }
 
-ZTEST(tick_v03, test_config_invalid_exceeds_max)
+ZTEST(tick_v03, test_config_invalid_zero_duration)
 {
-	struct tick_config req = {.period_ms = 2000, .max_period_ms = 1000};
+	struct tick_config req = {.duration_ms = 0, .period_ms = 100};
 	int rc = tick_config(&tick_fast, &req, NULL, K_MSEC(100));
-	zassert_equal(rc, -EINVAL, "period_ms > max_period_ms must be rejected, got %d", rc);
+	zassert_equal(rc, -EINVAL, "duration_ms=0 must be rejected, got %d", rc);
 }
 
 ZTEST(tick_v03, test_resp_null_discards)
@@ -169,7 +171,7 @@ ZTEST(tick_v03, test_start_one_leaves_other_idle)
 
 ZTEST(tick_v03, test_config_one_leaves_other_unchanged)
 {
-	struct tick_config mutate = {.period_ms = 42, .max_period_ms = 60000};
+	struct tick_config mutate = {.duration_ms = 42, .period_ms = 42};
 	zassert_ok(tick_config(&tick_fast, &mutate, NULL, K_MSEC(100)));
 
 	struct tick_config slow_cfg = {0};

@@ -22,7 +22,7 @@ static int validate_config(const struct tick_config *c)
 	if (c->period_ms == 0) {
 		return -EINVAL;
 	}
-	if (c->max_period_ms != 0 && c->period_ms > c->max_period_ms) {
+	if (c->duration_ms == 0) {
 		return -EINVAL;
 	}
 	return 0;
@@ -50,7 +50,7 @@ int tick_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
 		return -EALREADY;
 	}
 
-	k_timer_start(&d->timer, K_MSEC(cfg->period_ms), K_MSEC(cfg->period_ms));
+	k_timer_start(&d->timer, K_MSEC(cfg->duration_ms), K_MSEC(cfg->period_ms));
 	d->is_running = true;
 
 	if (resp != NULL) {
@@ -113,13 +113,14 @@ int tick_config_impl(const struct zephlet *z, const struct tick_config *req,
 
 	if (d->is_running) {
 		k_timer_stop(&d->timer);
-		k_timer_start(&d->timer, K_MSEC(cfg->period_ms), K_MSEC(cfg->period_ms));
+		k_timer_start(&d->timer, K_MSEC(cfg->duration_ms), K_MSEC(cfg->period_ms));
 	}
 
 	if (resp != NULL) {
 		*resp = *cfg;
 	}
-	LOG_DBG("%s: reconfigured (period=%u ms)", z->name, cfg->period_ms);
+	LOG_DBG("%s: reconfigured (duration=%u ms, period=%u ms)", z->name, cfg->duration_ms,
+		cfg->period_ms);
 	return 0;
 }
 

@@ -18,8 +18,8 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 /* ----- Instance storage + initial config ------------------------------ */
 
 static struct tick_config tick_cfg = {
+	.duration_ms = 600,
 	.period_ms = 1000,
-	.max_period_ms = 60000,
 };
 static struct tick_data tick_data_storage;
 ZEPHLET_NEW(tick, tick_timer_based_impl, &tick_cfg, &tick_data_storage, tick_init_fn);
@@ -57,12 +57,14 @@ int main(void)
 
 	struct tick_config tick_config_now = {0};
 	if (tick_get_config(&tick_timer_based_impl, &tick_config_now, K_MSEC(500)) == 0) {
-		printk("Tick config: period_ms=%u\n", tick_config_now.period_ms);
+		printk("Tick config: duration_ms=%u, period_ms=%u\n", tick_config_now.duration_ms,
+		       tick_config_now.period_ms);
 	}
 
-	struct tick_config tick_new = {.period_ms = 1000, .max_period_ms = 60000};
+	struct tick_config tick_new = {.duration_ms = 3000, .period_ms = 1000};
 	if (tick_config(&tick_timer_based_impl, &tick_new, NULL, K_MSEC(500)) == 0) {
-		printk("Tick config updated, period_ms=%u\n", tick_new.period_ms);
+		printk("Tick config updated, duration_ms=%u, period_ms=%u\n", tick_new.duration_ms,
+		       tick_new.period_ms);
 	}
 
 	struct lifecycle_status st = {0};
@@ -75,7 +77,7 @@ int main(void)
 		printk("Tick is %srunning\n", st.is_running ? "" : "not ");
 	}
 
-	k_sleep(K_SECONDS(5));
+	k_sleep(K_SECONDS(10));
 
 	(void)tick_stop(&tick_timer_based_impl, NULL, K_MSEC(500));
 
