@@ -102,3 +102,39 @@ test_coverage:
     @echo "{{ pre }} test_coverage"
     west twister --testsuite-root src --coverage --coverage-tool gcovr -O {{ twister_out_dir }}
     west twister --testsuite-root tests --coverage --coverage-tool gcovr -O {{ twister_out_dir }}
+
+# Footprint analysis on nrf52833dk
+nrf_build_dir := './build_nrf'
+
+size_nrf:
+    @echo "{{ pre }} size_nrf: building for nrf52833dk + zephlet footprint report"
+    west build -d {{ nrf_build_dir }} -b nrf52833dk/nrf52833 .
+    west build -d {{ nrf_build_dir }} -t rom_report > {{ nrf_build_dir }}/rom_report.txt
+    west build -d {{ nrf_build_dir }} -t ram_report > {{ nrf_build_dir }}/ram_report.txt
+    python scripts/size_report.py {{ nrf_build_dir }} > {{ nrf_build_dir }}/zephlet_size_report.md
+    @echo "  rom_report:    {{ nrf_build_dir }}/rom_report.txt"
+    @echo "  ram_report:    {{ nrf_build_dir }}/ram_report.txt"
+    @echo "  zephlet table: {{ nrf_build_dir }}/zephlet_size_report.md"
+    @cat {{ nrf_build_dir }}/zephlet_size_report.md
+
+# Marginal cost: rebuild without one zephlet, diff zephlet_size_report.md
+size_nrf_minus zephlet:
+    @echo "{{ pre }} size_nrf_minus: rebuilding nrf52833dk with CONFIG_ZEPHLET_{{ zephlet }}=n"
+    west build -d {{ nrf_build_dir }}_minus -b nrf52833dk/nrf52833 . -- -DCONFIG_ZEPHLET_{{ zephlet }}=n
+    python scripts/size_report.py {{ nrf_build_dir }}_minus > {{ nrf_build_dir }}_minus/zephlet_size_report.md
+    @echo "Diff vs full build:"
+    @diff {{ nrf_build_dir }}/zephlet_size_report.md {{ nrf_build_dir }}_minus/zephlet_size_report.md || true
+
+# Latency benchmark on nrf52833dk
+bench_build_dir := './build_bench'
+
+bench:
+    @echo "{{ pre }} bench: building latency harness for nrf52833dk"
+    west build -d {{ bench_build_dir }} -b nrf52833dk/nrf52833 tests/bench
+
+bench_flash:
+    @echo "{{ pre }} bench_flash: flashing bench harness"
+    west flash -d {{ bench_build_dir }}
+
+bench_clean:
+    rm -rf {{ bench_build_dir }}

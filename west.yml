@@ -18,3 +18,4 @@ manifest:
         name-allowlist:
           - cmsis_6 # ARM CMSIS (required by soc/arm/mps2/soc.h)
           - nanopb # Protobuf codegen (zephlet requirement)
+          - hal_nordic # Nordic HAL (required for nrf52833dk builds)
