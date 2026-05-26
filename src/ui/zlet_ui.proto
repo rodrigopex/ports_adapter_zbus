@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "nanopb.proto";
 import "zephlet.proto";
+import "zephlet_options.proto";
 
 option (nanopb_fileopt).long_names = false;
 
@@ -31,6 +32,8 @@ message Ui {
  * enum-typed RPC inputs; will return as a nested-message input when added.
  */
 service UiApi {
+  option (zephlet.coap) = true;
+
   rpc start(Empty) returns (Lifecycle.Status);
   rpc stop(Empty) returns (Lifecycle.Status);
   rpc get_status(Empty) returns (Lifecycle.Status);

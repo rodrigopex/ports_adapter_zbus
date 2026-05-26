@@ -43,6 +43,34 @@ Tick is running
 <inf> zlet_ui: ui_fake_impl: blink #6
 ```
 
+## Run CoAP (native_sim in Docker)
+
+The `ui` and `tick` zephlets are opted into the CoAP frontend (`option (zephlet.coap) = true;` at service level). With the `prj_coap.conf` overlay, the app builds for `native_sim/native/64` using offloaded sockets, so the Zephyr CoAP server binds a real host socket on `0.0.0.0:5683`.
+
+One-time setup: build the sibling infra's tester image (which already has the Zephyr SDK and aiocoap installed).
+
+```bash
+just -f ../modules/lib/zephlet/justfile docker-build
+```
+
+Then in two terminals:
+
+```bash
+# Terminal 1: build + run, foreground, Ctrl-C to stop.
+just native-coap
+```
+
+```bash
+# Terminal 2: drive a few RPCs.
+just native-coap-smoke
+```
+
+`native-coap-smoke` runs aiocoap from a second container that joins the demo's network namespace (`--network container:zlet_coap_demo`), so the test is independent of host-to-container UDP forwarding (which varies across Docker Desktop, Colima, and bare Linux).
+
+Resource URI shape is `/zlet/<type>/<instance>/<method>`, POST with a protobuf-encoded request body (empty body where the method takes `Empty`). Responses are 2.05 Content with the encoded reply, or 4.04 / 4.05 / 4.00 on routing or decode errors. The `tampering` zephlet has no CoAP opt-in, so its instance returns 4.04.
+
+Reaching the CoAP server from the **host** (e.g. a libcoap `coap-client` on macOS) is desirable but currently runtime-dependent: Docker Desktop and Colima both have UDP-forwarding quirks that haven't been pinned down in this tree, so the smoke target stays inside the docker network for now.
+
 ## Why look at this
 
 - Pure **domain isolation**: zephlets don't `#include` each other. Wiring happens only in `main.c` (instance definitions) and `policies.c` (event subscriptions).

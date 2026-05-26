@@ -138,3 +138,56 @@ bench_flash:
 
 bench_clean:
     rm -rf {{ bench_build_dir }}
+
+# CoAP demo: native_sim/native/64 build + run inside the sibling infra's
+# zephlet-tester image (Zephyr only supports POSIX arch on Linux, so the
+# build itself must run in the container too). Run
+# `just -f ../modules/lib/zephlet/justfile docker-build` once first to
+# build the image. `native-coap-smoke` drives RPCs via aiocoap from a
+# second container that shares the demo's network namespace — the only
+# host-to-server path independent of the container runtime's UDP
+# forwarding behavior.
+workspace_root := justfile_directory() + "/.."
+native_build_dir := "./build_native"
+docker_image := "zephlet-tester:latest"
+demo_container := "zlet_coap_demo"
+
+# Build the native_sim/native/64 binary inside the docker image with the
+# CoAP overlay applied. Output goes to build_native/ on the host.
+native-coap-build:
+    @echo "{{ pre }} native-coap-build: native_sim/native/64 + prj_coap.conf (in docker)"
+    docker run --rm -u root \
+        --cap-add=NET_ADMIN --device=/dev/net/tun \
+        -v {{ workspace_root }}:/workdir -w /workdir/ports_adapters_zbus \
+        {{ docker_image }} \
+        west build -b native_sim/native/64 {{ dir }} -d {{ native_build_dir }} -- -DOVERLAY_CONFIG=prj_coap.conf
+
+# Run the previously-built binary inside docker, foreground, Ctrl-C to
+# stop. Named '{{ demo_container }}' so `native-coap-smoke` can attach
+# to the same network namespace. UDP/5683 is also mapped to the host
+# (may or may not be reachable depending on the container runtime).
+native-coap-run:
+    @echo "{{ pre }} native-coap-run: docker container '{{ demo_container }}' on UDP/5683"
+    docker run --rm -it -u root --name {{ demo_container }} -p 5683:5683/udp \
+        --cap-add=NET_ADMIN --device=/dev/net/tun \
+        -v {{ workspace_root }}:/workdir -w /workdir/ports_adapters_zbus \
+        {{ docker_image }} \
+        {{ native_build_dir }}/zephyr/zephyr.exe
+
+# Drive a few CoAP RPCs against a running demo container using aiocoap
+# from a sidecar container that joins the demo's network namespace.
+# Requires `just native-coap-run` (or any `docker run --name {{ demo_container }} ...`)
+# to be running in another terminal first.
+native-coap-smoke:
+    @echo "{{ pre }} native-coap-smoke: aiocoap sidecar against '{{ demo_container }}'"
+    docker run --rm \
+        --network container:{{ demo_container }} \
+        -v {{ workspace_root }}:/workdir -w /workdir/ports_adapters_zbus \
+        {{ docker_image }} \
+        python3 scripts/coap_smoke.py
+
+# Build + run as a single command.
+native-coap: native-coap-build native-coap-run
+
+native-coap-clean:
+    rm -rf {{ native_build_dir }}
