@@ -1,21 +1,26 @@
 manifest:
-  remotes:
-    - name: zephyrproject-rtos
-      url-base: https://github.com/zephyrproject-rtos
+        remotes:
+                - name: zephyrproject-rtos
+                  url-base: https://github.com/zephyrproject-rtos
 
-  projects:
-    - name: zephlet
-      url: git@github.com:rodrigopex/zephlet.git
-      path: modules/lib/zephlet
-      revision: main
-      west-commands: west/west-commands.yml
-    - name: zephyr
-      remote: zephyrproject-rtos
-      revision: main
-      clone-depth: 1
-      import:
-        # By using name-allowlist we clone only required modules
-        name-allowlist:
-          - cmsis_6 # ARM CMSIS (required by soc/arm/mps2/soc.h)
-          - nanopb # Protobuf codegen (zephlet requirement)
-          - hal_nordic # Nordic HAL (required for nrf52833dk builds)
+        projects:
+                - name: zephlet
+                  url: git@github.com:rodrigopex/zephlet.git
+                  path: modules/lib/zephlet
+                  revision: main
+                  west-commands: west/west-commands.yml
+                - name: zview
+                  url: https://github.com/wkhadgar/zview
+                  revision: v0.13.0
+                  path: modules/tools/zview
+                  west-commands: scripts/west-commands.yml
+                - name: zephyr
+                  remote: zephyrproject-rtos
+                  revision: v4.4.0
+                  clone-depth: 1
+                  import:
+                          # By using name-allowlist we clone only required modules
+                          name-allowlist:
+                                  - cmsis_6 # ARM CMSIS (required by soc/arm/mps2/soc.h)
+                                  - nanopb # Protobuf codegen (zephlet requirement)
+                                  - hal_nordic # Nordic HAL (required for nrf52833dk builds)
