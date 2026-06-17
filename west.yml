@@ -24,3 +24,5 @@ manifest:
                                   - cmsis_6 # ARM CMSIS (required by soc/arm/mps2/soc.h)
                                   - nanopb # Protobuf codegen (zephlet requirement)
                                   - hal_nordic # Nordic HAL (required for nrf52833dk builds)
+                                  - mbedtls # mbedTLS (CONFIG_ZEPHLETS_COAP_DTLS, PSK)
+                                  - tf-psa-crypto # mbedTLS 4.x PSA crypto backend (DTLS dep)
