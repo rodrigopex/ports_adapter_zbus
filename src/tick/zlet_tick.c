@@ -30,7 +30,7 @@ static int validate_config(const struct tick_config *c)
 
 /* ----- Strong handler overrides --------------------------------------- */
 
-int tick_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
+int tick_alt_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tick_data *d = z->data;
 	struct tick_config *cfg = z->config;
@@ -61,7 +61,7 @@ int tick_start_impl(const struct zephlet *z, struct lifecycle_status *resp)
 	return 0;
 }
 
-int tick_stop_impl(const struct zephlet *z, struct lifecycle_status *resp)
+int tick_alt_stop_impl(const struct zephlet *z, struct lifecycle_status *resp)
 {
 	struct tick_data *d = z->data;
 

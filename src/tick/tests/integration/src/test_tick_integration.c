@@ -70,8 +70,8 @@ static void reset(void *fixture)
 {
 	ARG_UNUSED(fixture);
 
-	(void)tick_stop(&tick_fast, NULL, K_MSEC(100));
-	(void)tick_stop(&tick_slow, NULL, K_MSEC(100));
+	(void)tick_alt_stop(&tick_fast, NULL, K_MSEC(100));
+	(void)tick_alt_stop(&tick_slow, NULL, K_MSEC(100));
 
 	struct tick_config fast_restore = {.duration_ms = 100, .period_ms = 100};
 	struct tick_config slow_restore = {.duration_ms = 500, .period_ms = 500};
@@ -95,17 +95,17 @@ ZTEST(tick_v03, test_start_stop)
 {
 	struct lifecycle_status st = {0};
 
-	zassert_ok(tick_start(&tick_fast, &st, K_MSEC(100)));
+	zassert_ok(tick_alt_start(&tick_fast, &st, K_MSEC(100)));
 	zassert_true(st.is_running);
 
-	zassert_ok(tick_stop(&tick_fast, &st, K_MSEC(100)));
+	zassert_ok(tick_alt_stop(&tick_fast, &st, K_MSEC(100)));
 	zassert_false(st.is_running);
 }
 
 ZTEST(tick_v03, test_start_already_running)
 {
-	zassert_ok(tick_start(&tick_fast, NULL, K_MSEC(100)));
-	int rc = tick_start(&tick_fast, NULL, K_MSEC(100));
+	zassert_ok(tick_alt_start(&tick_fast, NULL, K_MSEC(100)));
+	int rc = tick_alt_start(&tick_fast, NULL, K_MSEC(100));
 	zassert_equal(rc, -EALREADY, "second start should return -EALREADY, got %d", rc);
 }
 
@@ -139,7 +139,7 @@ ZTEST(tick_v03, test_config_invalid_zero_duration)
 
 ZTEST(tick_v03, test_resp_null_discards)
 {
-	int rc = tick_start(&tick_fast, NULL, K_MSEC(100));
+	int rc = tick_alt_start(&tick_fast, NULL, K_MSEC(100));
 	zassert_ok(rc, "start with NULL resp should succeed, got %d", rc);
 }
 
@@ -162,7 +162,7 @@ ZTEST(tick_v03, test_start_one_leaves_other_idle)
 	struct lifecycle_status fast_st = {0};
 	struct lifecycle_status slow_st = {0};
 
-	zassert_ok(tick_start(&tick_fast, &fast_st, K_MSEC(100)));
+	zassert_ok(tick_alt_start(&tick_fast, &fast_st, K_MSEC(100)));
 	zassert_true(fast_st.is_running);
 
 	zassert_ok(tick_get_status(&tick_slow, &slow_st, K_MSEC(100)));
@@ -184,7 +184,7 @@ ZTEST(tick_v03, test_events_per_instance)
 	reset_event_counters();
 
 	/* Start only tick_fast; tick_slow should produce no events. */
-	zassert_ok(tick_start(&tick_fast, NULL, K_MSEC(100)));
+	zassert_ok(tick_alt_start(&tick_fast, NULL, K_MSEC(100)));
 
 	/* Wait for at least one fast tick. */
 	zassert_ok(k_sem_take(&fast_event_sem, K_MSEC(500)),
@@ -195,15 +195,15 @@ ZTEST(tick_v03, test_events_per_instance)
 	zassert_equal(slow_count, 0,
 		      "tick_slow must not emit when not started; got %d events", slow_count);
 
-	(void)tick_stop(&tick_fast, NULL, K_MSEC(100));
+	(void)tick_alt_stop(&tick_fast, NULL, K_MSEC(100));
 }
 
 ZTEST(tick_v03, test_both_instances_emit_independently)
 {
 	reset_event_counters();
 
-	zassert_ok(tick_start(&tick_fast, NULL, K_MSEC(100)));
-	zassert_ok(tick_start(&tick_slow, NULL, K_MSEC(100)));
+	zassert_ok(tick_alt_start(&tick_fast, NULL, K_MSEC(100)));
+	zassert_ok(tick_alt_start(&tick_slow, NULL, K_MSEC(100)));
 
 	/* Sleep long enough for multiple fast ticks and at least one slow. */
 	k_msleep(700);
@@ -217,6 +217,6 @@ ZTEST(tick_v03, test_both_instances_emit_independently)
 		     "tick_slow should emit >=1 in 700 ms (500 ms period); got %d", slow_count);
 	zassert_true(fast_count > slow_count, "tick_fast should emit more than tick_slow");
 
-	(void)tick_stop(&tick_fast, NULL, K_MSEC(100));
-	(void)tick_stop(&tick_slow, NULL, K_MSEC(100));
+	(void)tick_alt_stop(&tick_fast, NULL, K_MSEC(100));
+	(void)tick_alt_stop(&tick_slow, NULL, K_MSEC(100));
 }
