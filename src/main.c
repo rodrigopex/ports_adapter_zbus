@@ -73,13 +73,13 @@ int main(void)
 		printk("UI is %srunning\n", st.is_running ? "" : "not ");
 	}
 
-	if (tick_start(&tick_timer_based_impl, &st, K_MSEC(500)) == 0) {
+	if (tick_alt_start(&tick_timer_based_impl, &st, K_MSEC(500)) == 0) {
 		printk("Tick is %srunning\n", st.is_running ? "" : "not ");
 	}
 
 	k_sleep(K_SECONDS(10));
 
-	(void)tick_stop(&tick_timer_based_impl, NULL, K_MSEC(500));
+	(void)tick_alt_stop(&tick_timer_based_impl, NULL, K_MSEC(500));
 
 	(void)tampering_start(&tampering_emul_impl, NULL, K_FOREVER);
 	(void)tampering_force_tampering(&tampering_emul_impl, K_MSEC(250));

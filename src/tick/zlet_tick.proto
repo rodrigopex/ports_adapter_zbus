@@ -26,8 +26,8 @@ message Tick {
 service TickApi {
   option (zephlet.coap) = true;
 
-  rpc start(Empty) returns (Lifecycle.Status);
-  rpc stop(Empty) returns (Lifecycle.Status);
+  rpc alt_start(Empty) returns (Lifecycle.Status);
+  rpc alt_stop(Empty) returns (Lifecycle.Status);
   rpc get_status(Empty) returns (Lifecycle.Status);
   rpc config(Tick.Config) returns (Tick.Config);
   rpc get_config(Empty) returns (Tick.Config);

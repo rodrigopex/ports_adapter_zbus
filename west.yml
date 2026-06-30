@@ -4,6 +4,9 @@ manifest:
                   url-base: https://github.com/zephyrproject-rtos
 
         projects:
+                - name: zbook
+                  url: https://github.com/zephyr-book/zbook
+                  revision: main
                 - name: zephlet
                   url: git@github.com:rodrigopex/zephlet.git
                   path: modules/lib/zephlet
@@ -24,5 +27,8 @@ manifest:
                                   - cmsis_6 # ARM CMSIS (required by soc/arm/mps2/soc.h)
                                   - nanopb # Protobuf codegen (zephlet requirement)
                                   - hal_nordic # Nordic HAL (required for nrf52833dk builds)
+                                  - hal_rpi_pico
+                                  - fatfs
+                                  - littlefs
                                   - mbedtls # mbedTLS (CONFIG_ZEPHLETS_COAP_DTLS, PSK)
                                   - tf-psa-crypto # mbedTLS 4.x PSA crypto backend (DTLS dep)
