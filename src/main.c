@@ -12,6 +12,7 @@
 #include "zlet_tick.h"
 #include "zlet_ui.h"
 #include "zlet_tampering.h"
+#include "zlet_typelab.h"
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
@@ -37,6 +38,14 @@ static struct tampering_config tampering_cfg = {
 static struct tampering_data tampering_data_storage;
 ZEPHLET_NEW(tampering, tampering_emul_impl, &tampering_cfg, &tampering_data_storage,
 	    tampering_init_fn);
+
+/* Bench for exercising every shell-supported nanopb scalar type via
+ * `zlet typelab_bench config ...` / `get_config` — see
+ * src/typelab/zlet_typelab.proto. No policies wiring: it's a standalone
+ * type-exercise fixture, not part of the tick/ui/tampering event chain. */
+static struct typelab_config typelab_cfg;
+static struct typelab_data typelab_data_storage;
+ZEPHLET_NEW(typelab, typelab_bench, &typelab_cfg, &typelab_data_storage, typelab_init_fn);
 
 int main(void)
 {

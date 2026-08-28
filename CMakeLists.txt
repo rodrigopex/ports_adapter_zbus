@@ -12,6 +12,7 @@ set(EXTRA_ZEPHYR_MODULES
     "${CMAKE_SOURCE_DIR}/src/ui"
     "${CMAKE_SOURCE_DIR}/src/tick"
     "${CMAKE_SOURCE_DIR}/src/tampering"
+    "${CMAKE_SOURCE_DIR}/src/typelab"
 )
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})

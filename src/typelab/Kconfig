@@ -1,0 +1,16 @@
+config ZEPHLET_TYPELAB
+    bool "typelab Zephlet Module"
+    select NANOPB
+    select ZBUS
+    select ZBUS_ASYNC_LISTENER
+    help
+      Enable this option to include the typelab Zephlet Module in the build.
+      typelab Zephlet Module.
+
+if(ZEPHLET_TYPELAB)
+
+module = ZEPHLET_TYPELAB
+module-str = zlet_typelab
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

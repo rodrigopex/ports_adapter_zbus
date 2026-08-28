@@ -16,6 +16,7 @@ Instances are declared with `ZEPHLET_NEW(type, name, cfg, data, init)` and auto-
 - `src/tick/` — k_timer → periodic `tick_events` with timestamp.
 - `src/ui/` — `blink` command increments a counter and emits `ui_events`.
 - `src/tampering/` — `force_tampering` command emits `tampering_events` with `proximity_tamper_detected=true`.
+- `src/typelab/` — no domain behavior; one `Config` field (and matching `set_X`/`get_X` rpc pair) per nanopb scalar type the [zlet shell frontend](../modules/lib/zephlet/docs/plans/shell-frontend.md) supports. A bench for exercising every shell encode/decode path — see [Shell (typelab)](#shell-typelab) below.
 - `src/policies.c` — two `ZEPHLET_EVENTS_LISTENER` blocks wiring tick + tampering events to `ui_blink`.
 - `src/main.c` — instantiates one of each and drives lifecycle.
 
@@ -71,6 +72,23 @@ Resource URI shape is `/zlet/<type>/<instance>/<method>`, POST with a protobuf-e
 
 Reaching the CoAP server from the **host** (e.g. a libcoap `coap-client` on macOS) is desirable but currently runtime-dependent: Docker Desktop and Colima both have UDP-forwarding quirks that haven't been pinned down in this tree, so the smoke target stays inside the docker network for now.
 
+## Shell (typelab)
+
+`CONFIG_ZEPHLETS_SHELL=y` (default in `prj.conf`) registers every zephlet instance under one `zlet` shell root command automatically — no app code needed beyond the `ZEPHLET_NEW(...)` call already in `main.c`. `typelab_bench` is the one instance built specifically to exercise it:
+
+```
+uart:~$ zlet <TAB>                          # tick_timer_based_impl / ui_fake_impl / tampering_emul_impl / typelab_bench
+uart:~$ zlet typelab_bench get_config
+uart:~$ zlet typelab_bench set_uint32 42
+uart:~$ zlet typelab_bench get_uint32
+uart:~$ zlet typelab_bench set_string "hello"
+uart:~$ zlet typelab_bench set_bytes hDEADBEEF   # h<hex> for bytes; hex numeral (not a byte-dump) for integers
+```
+
+`config`/`get_config` set or read all 18 fields in one call; the `set_X`/`get_X` pairs read/write the exact same underlying storage, one field at a time — either surface works, pick whichever is more convenient.
+
+**Gotcha:** `TypelabUFlag`/`TypelabSFlag` (`zlet_typelab.proto`) each declare only two legal values, so `arm-zephyr-eabi-gcc` stores them in a single byte by default (no flag needed — the toolchain's own choice of smallest fitting type). The shell frontend assigns through a real narrowing C cast to the field's *actual* type, never a range check, so `zlet typelab_bench set_enum 1000000` silently truncates to `1000000 & 0xFF == 64` instead of erroring — surprising for a 2-value enum specifically because nothing in the `.proto` hints the storage is that small. See the comment above `TypelabUFlag` in `zlet_typelab.proto` and [the shell frontend's "Known integration gotchas"](../modules/lib/zephlet/docs/plans/shell-frontend.md) for the general rule (every shell-settable field truncates this way, not just enums).
+
 ## Why look at this
 
 - Pure **domain isolation**: zephlets don't `#include` each other. Wiring happens only in `main.c` (instance definitions) and `policies.c` (event subscriptions).
@@ -85,10 +103,18 @@ Reaching the CoAP server from the **host** (e.g. a libcoap `coap-client` on macO
 CONFIG_ZEPHLET_TICK=y
 CONFIG_ZEPHLET_UI=y
 CONFIG_ZEPHLET_TAMPERING=y
+CONFIG_ZEPHLET_TYPELAB=y
+
+CONFIG_ZEPHLETS_SHELL=y
+CONFIG_CBPRINTF_COMPLETE=y      # typelab's f_float/f_double need these
+CONFIG_CBPRINTF_FP_SUPPORT=y    # or the shell prints "%g" instead of the value
+CONFIG_SHELL_ARGC_MAX=32        # typelab's 18-field `config` needs 21 tokens; default (20) rejects it
+
 CONFIG_LOG=y
 CONFIG_ZEPHLET_TICK_LOG_LEVEL_DBG=y
 CONFIG_ZEPHLET_UI_LOG_LEVEL_DBG=y
 CONFIG_ZEPHLET_TAMPERING_LOG_LEVEL_DBG=y
+CONFIG_ZEPHLET_TYPELAB_LOG_LEVEL_DBG=y
 CONFIG_ASSERT=y
 ```
 
