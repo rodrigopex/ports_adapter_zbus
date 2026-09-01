@@ -74,20 +74,38 @@ Reaching the CoAP server from the **host** (e.g. a libcoap `coap-client` on macO
 
 ## Shell (typelab)
 
-`CONFIG_ZEPHLETS_SHELL=y` (default in `prj.conf`) registers every zephlet instance under one `zlet` shell root command automatically — no app code needed beyond the `ZEPHLET_NEW(...)` call already in `main.c`. `typelab_bench` is the one instance built specifically to exercise it:
+`CONFIG_ZEPHLETS_SHELL=y` (default in `prj.conf`) registers every zephlet instance under one `zlet` shell root command automatically — no app code needed beyond the `ZEPHLET_NEW(...)` call already in `main.c`. `typelab_bench` is the one instance built specifically to exercise it.
+
+An RPC takes its request as a protobuf **text-format** message, parsed by [zephyr-nanopb-textformat](https://codeberg.org/rodrigopex/zephyr-nanopb-textformat):
 
 ```
 uart:~$ zlet <TAB>                          # tick_timer_based_impl / ui_fake_impl / tampering_emul_impl / typelab_bench
 uart:~$ zlet typelab_bench get_config
-uart:~$ zlet typelab_bench set_uint32 42
-uart:~$ zlet typelab_bench get_uint32
-uart:~$ zlet typelab_bench set_string "hello"
-uart:~$ zlet typelab_bench set_bytes hDEADBEEF   # h<hex> for bytes; hex numeral (not a byte-dump) for integers
+uart:~$ zlet typelab_bench set_uint32 value: 42
+uart:~$ zlet typelab_bench set_fixed32 value: 0x12345678     # 0x hex, decimal, or octal 0755
+uart:~$ zlet typelab_bench set_string value: "hi there"      # quote the value, not the argument
+uart:~$ zlet typelab_bench set_bytes value: "\x0F\x0Ahello\x1E"
+uart:~$ zlet typelab_bench config f_uint32: 1, f_bool: true   # any subset, in any order
 ```
 
-`config`/`get_config` set or read all 18 fields in one call; the `set_X`/`get_X` pairs read/write the exact same underlying storage, one field at a time — either surface works, pick whichever is more convenient.
+Field names, not positions — so order is free and any subset works. Omitted fields read back as zero, because the parser zeroes the message before writing into it.
 
-**Gotcha:** `TypelabUFlag`/`TypelabSFlag` (`zlet_typelab.proto`) each declare only two legal values, so `arm-zephyr-eabi-gcc` stores them in a single byte by default (no flag needed — the toolchain's own choice of smallest fitting type). The shell frontend assigns through a real narrowing C cast to the field's *actual* type, never a range check, so `zlet typelab_bench set_enum 1000000` silently truncates to `1000000 & 0xFF == 64` instead of erroring — surprising for a 2-value enum specifically because nothing in the `.proto` hints the storage is that small. See the comment above `TypelabUFlag` in `zlet_typelab.proto` and [the shell frontend's "Known integration gotchas"](../modules/lib/zephlet/docs/plans/shell-frontend.md) for the general rule (every shell-settable field truncates this way, not just enums).
+`config`/`get_config` set or read every field in one call; the `set_X`/`get_X` pairs read/write the exact same underlying storage, one field at a time — either surface works, pick whichever is more convenient.
+
+Errors carry a byte offset and, when a field was in scope, its name:
+
+```
+uart:~$ zlet typelab_bench config f_uint32: -1
+config: at offset 10: value out of range in field 'f_uint32'
+uart:~$ zlet typelab_bench config nope: 1
+config: at offset 0: no such field
+```
+
+**Bytes read back differently from how they are written.** Input takes `\xH[H]`, `\NNN` and `\uXXXX` escapes; output is always three-digit octal, so `"\x0F\x0Ahello\x1E"` prints as `"\017\012hello\036"`. That asymmetry is deliberate: a hex escape runs on whenever the next byte is also a hex digit (`\x0` followed by `a` reads back as the single byte `0x0A`), while three octal digits cannot. Round-trip holds at the value level, not the text level. Repeated fields are the same story — `[1, 2, 3]` is accepted, but they always print as repetition, one `name: value` per element.
+
+**Two `prj.conf` settings are not optional.** `CONFIG_SHELL_WILDCARD=n`, because each request arrives as a `SHELL_OPT_ARG_RAW` argument and wildcard expansion rewrites the command buffer before the handler runs — silently. And `CONFIG_CBPRINTF_FULL_INTEGRAL=y`, or `typelab_config`'s 64-bit fields print wrongly rather than imprecisely. A long message may also need `CONFIG_SHELL_CMD_BUFF_SIZE` and `CONFIG_SHELL_BACKEND_SERIAL_RX_RING_BUFFER_SIZE` raised above their defaults (256 and 64); the latter matters when a line is *pasted* rather than typed, which arrives faster than the shell drains it.
+
+**Previously a gotcha, now fixed.** `TypelabUFlag`/`TypelabSFlag` (`zlet_typelab.proto`) each declare only two legal values, so `arm-zephyr-eabi-gcc` stores them in a single byte. The old frontend assigned through a narrowing C cast to the field's actual type with no range check, so `set_enum 1000000` silently truncated to `1000000 & 0xFF == 64`. Every numeric write now dispatches on the field's own `data_size`, read from the descriptor rather than assumed, so that is a range error instead — as is a negative literal in an unsigned field, which used to wrap.
 
 ## Why look at this
 

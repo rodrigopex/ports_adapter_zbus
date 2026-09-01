@@ -17,6 +17,10 @@ manifest:
                   revision: v0.13.0
                   path: modules/tools/zview
                   west-commands: scripts/west-commands.yml
+                - name: zephyr-nanopb-textformat
+                  url: https://codeberg.org/rodrigopex/zephyr-nanopb-textformat
+                  revision: v0.1.0
+                  path: modules/lib/zephyr-nanopb-textformat
                 - name: zephyr
                   remote: zephyrproject-rtos
                   revision: v4.4.0
