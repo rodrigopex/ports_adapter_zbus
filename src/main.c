@@ -28,9 +28,9 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
  * `<prefix>_interface.c`, declared in its header); `lifecycle_status_t_tf`
  * is the shared zephlet.proto one, from `zephlet_textformat.h`.
  *
- * Output style is the library's own Kconfig choice; this app picks compact
- * (see prj.conf), so a message prints on one line.
- * `pb_tf_print_buf()` is preferred over
+ * Style is named at the call site: `pb_tf_print_buf_compact()` puts a
+ * message on one line, which is the shortest form that is still valid
+ * standalone text format. The `_buf` form is preferred over
  * `pb_tf_print()` with a character sink: it terminates the buffer even when
  * a message prints nothing, and reports truncation as PB_TF_ERR_NO_SPACE
  * rather than a flag to remember to check.
@@ -41,22 +41,16 @@ static void print_proto(const char *label, const struct pb_tf_msg *tf, const voi
 	 * guidance is to keep the output buffer off it. Only ever called from
 	 * this thread, sequentially. */
 	static char text[192];
-	enum pb_tf_err err = pb_tf_print_buf(tf, msg, text, sizeof(text));
+	int err = pb_tf_print_buf_compact(tf, msg, text, sizeof(text));
 
-	if (err != PB_TF_OK) {
+	if (err != 0) {
 		printk("%s: cannot print: %s\n", label, pb_tf_strerror(err));
 		return;
 	}
 
-	/* Style is a compile-time choice, and the two need different framing:
-	 * multi-line already terminates its last field with a newline, while
-	 * compact emits one line and no terminator. The unused branch compiles
-	 * out. */
-	if (IS_ENABLED(CONFIG_NANOPB_TEXTFORMAT_PRINT_COMPACT)) {
-		printk("%s: %s\n", label, text);
-	} else {
-		printk("%s:\n%s", label, text);
-	}
+	/* Compact is one line and carries no terminator of its own, so the
+	 * label and the message share a line and this adds the newline. */
+	printk("%s: %s\n", label, text);
 }
 
 /* ----- Instance storage + initial config ------------------------------ */
