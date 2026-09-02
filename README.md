@@ -131,7 +131,7 @@ config: at offset 0: no such field
 
 **Bytes read back differently from how they are written.** Input takes `\xH[H]`, `\NNN` and `\uXXXX` escapes; output is always three-digit octal, so `"\x0F\x0Ahello\x1E"` prints as `"\017\012hello\036"`. That asymmetry is deliberate: a hex escape runs on whenever the next byte is also a hex digit (`\x0` followed by `a` reads back as the single byte `0x0A`), while three octal digits cannot. Round-trip holds at the value level, not the text level. Repeated fields are the same story — `[1, 2, 3]` is accepted, but they always print as repetition, one `name: value` per element.
 
-**Two `prj.conf` settings are not optional.** `CONFIG_SHELL_WILDCARD=n`, because each request arrives as a `SHELL_OPT_ARG_RAW` argument and wildcard expansion rewrites the command buffer before the handler runs — silently. And `CONFIG_CBPRINTF_FULL_INTEGRAL=y`, or `typelab_config`'s 64-bit fields print wrongly rather than imprecisely. A long message may also need `CONFIG_SHELL_CMD_BUFF_SIZE` and `CONFIG_SHELL_BACKEND_SERIAL_RX_RING_BUFFER_SIZE` raised above their defaults (256 and 64); the latter matters when a line is *pasted* rather than typed, which arrives faster than the shell drains it.
+**One `prj.conf` setting is not optional:** `CONFIG_CBPRINTF_FULL_INTEGRAL=y`, or `typelab_config`'s 64-bit fields print wrongly rather than imprecisely. A long message may also need `CONFIG_SHELL_CMD_BUFF_SIZE` and `CONFIG_SHELL_BACKEND_SERIAL_RX_RING_BUFFER_SIZE` raised above their defaults (256 and 64); the latter matters when a line is *pasted* rather than typed, which arrives faster than the shell drains it. Enabling `CONFIG_ZEPHLETS_SHELL=y` needs nothing else — in particular `CONFIG_SHELL_WILDCARD` can stay at its default, since an RPC's raw argument is never tokenised and `*` or `?` inside a value survives intact.
 
 **Previously a gotcha, now fixed.** The old frontend assigned through a narrowing C cast to the field's actual type with no range check, so an oversized value wrapped silently. Every numeric write now dispatches on the field's own `data_size`, read from the descriptor rather than assumed, so it is a range error instead — as is a negative literal in an unsigned field, which used to wrap.
 
@@ -154,9 +154,10 @@ CONFIG_ZEPHLET_TAMPERING=y
 CONFIG_ZEPHLET_TYPELAB=y
 
 CONFIG_ZEPHLETS_SHELL=y
-CONFIG_CBPRINTF_COMPLETE=y      # typelab's f_float/f_double need these
-CONFIG_CBPRINTF_FP_SUPPORT=y    # or the shell prints "%g" instead of the value
-CONFIG_SHELL_ARGC_MAX=32        # typelab's 18-field `config` needs 21 tokens; default (20) rejects it
+CONFIG_CBPRINTF_FULL_INTEGRAL=y      # typelab's 64-bit fields print wrongly without it
+CONFIG_CBPRINTF_COMPLETE=y
+CONFIG_SHELL_CMD_BUFF_SIZE=1024      # a text-format line naming 18 fields is ~460 chars
+CONFIG_SHELL_BACKEND_SERIAL_RX_RING_BUFFER_SIZE=1024   # a *pasted* line outruns the default 64
 
 CONFIG_LOG=y
 CONFIG_ZEPHLET_TICK_LOG_LEVEL_DBG=y
