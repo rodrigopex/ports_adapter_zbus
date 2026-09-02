@@ -28,12 +28,19 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
  * `<prefix>_interface.c`, declared in its header); `lifecycle_status_t_tf`
  * is the shared zephlet.proto one, from `zephlet_textformat.h`.
  *
- * Style is named at the call site: `pb_tf_print_buf_compact()` puts a
- * message on one line, which is the shortest form that is still valid
- * standalone text format. The `_buf` form is preferred over
- * `pb_tf_print()` with a character sink: it terminates the buffer even when
- * a message prints nothing, and reports truncation as PB_TF_ERR_NO_SPACE
- * rather than a flag to remember to check.
+ * Style is named at the call site. `pb_tf_print_buf_compact_braces()` puts
+ * a message on one line wrapped in `{...}`, which reads better in a log
+ * than bare fields do -- the braces show where one message ends and the
+ * next label begins. Note the trade: outer braces are an input extension
+ * this library accepts but `protoc` does not, so a braced line is not
+ * portable text format. That is fine for a log; use the plain
+ * `_compact` form for anything meant to be fed back through standard
+ * tooling. The shell frontend does exactly that.
+ *
+ * The `_buf` form is preferred over `pb_tf_print()` with a character sink:
+ * it terminates the buffer even when a message prints nothing, and reports
+ * truncation as PB_TF_ERR_NO_SPACE rather than a flag to remember to
+ * check.
  */
 static void print_proto(const char *label, const struct pb_tf_msg *tf, const void *msg)
 {
@@ -41,15 +48,15 @@ static void print_proto(const char *label, const struct pb_tf_msg *tf, const voi
 	 * guidance is to keep the output buffer off it. Only ever called from
 	 * this thread, sequentially. */
 	static char text[192];
-	int err = pb_tf_print_buf_compact(tf, msg, text, sizeof(text));
+	int err = pb_tf_print_buf_compact_braces(tf, msg, text, sizeof(text));
 
 	if (err != 0) {
 		printk("%s: cannot print: %s\n", label, pb_tf_strerror(err));
 		return;
 	}
 
-	/* Compact is one line and carries no terminator of its own, so the
-	 * label and the message share a line and this adds the newline. */
+	/* Compact carries no terminator of its own, so the label and the
+	 * braced message share a line and this adds the newline. */
 	printk("%s: %s\n", label, text);
 }
 
