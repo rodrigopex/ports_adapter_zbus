@@ -133,7 +133,9 @@ config: at offset 0: no such field
 
 **Two `prj.conf` settings are not optional.** `CONFIG_SHELL_WILDCARD=n`, because each request arrives as a `SHELL_OPT_ARG_RAW` argument and wildcard expansion rewrites the command buffer before the handler runs — silently. And `CONFIG_CBPRINTF_FULL_INTEGRAL=y`, or `typelab_config`'s 64-bit fields print wrongly rather than imprecisely. A long message may also need `CONFIG_SHELL_CMD_BUFF_SIZE` and `CONFIG_SHELL_BACKEND_SERIAL_RX_RING_BUFFER_SIZE` raised above their defaults (256 and 64); the latter matters when a line is *pasted* rather than typed, which arrives faster than the shell drains it.
 
-**Previously a gotcha, now fixed.** `TypelabUFlag`/`TypelabSFlag` (`zlet_typelab.proto`) each declare only two legal values, so `arm-zephyr-eabi-gcc` stores them in a single byte. The old frontend assigned through a narrowing C cast to the field's actual type with no range check, so `set_enum 1000000` silently truncated to `1000000 & 0xFF == 64`. Every numeric write now dispatches on the field's own `data_size`, read from the descriptor rather than assumed, so that is a range error instead — as is a negative literal in an unsigned field, which used to wrap.
+**Previously a gotcha, now fixed.** The old frontend assigned through a narrowing C cast to the field's actual type with no range check, so an oversized value wrapped silently. Every numeric write now dispatches on the field's own `data_size`, read from the descriptor rather than assumed, so it is a range error instead — as is a negative literal in an unsigned field, which used to wrap.
+
+Enums show why reading the width matters. `TypelabUFlag`/`TypelabSFlag` declare only two legal values, and the storage the compiler picks is implementation-defined: `arm-zephyr-eabi-gcc` uses a single byte, so `set_enum 1000000` used to truncate to `1000000 & 0xFF == 64`; host gcc without `-fshort-enums` uses four bytes, where the same literal is simply in range. Nothing in the `.proto` hints at either, which is exactly why the width comes from the descriptor rather than an assumption.
 
 ## Why look at this
 

@@ -23,7 +23,7 @@ manifest:
                   path: modules/lib/zephyr-nanopb-textformat
                 - name: zephyr
                   remote: zephyrproject-rtos
-                  revision: v4.4.0
+                  revision: v4.4.2
                   clone-depth: 1
                   import:
                           # By using name-allowlist we clone only required modules
