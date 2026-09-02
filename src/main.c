@@ -9,12 +9,55 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
+#include <nanopb_textformat.h>
+
+#include "zephlet_textformat.h"
 #include "zlet_tick.h"
 #include "zlet_ui.h"
 #include "zlet_tampering.h"
 #include "zlet_typelab.h"
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
+
+/* ----- Printing proto structs ------------------------------------------
+ *
+ * Rather than hand-writing a format string per message -- which has to be
+ * kept in step with the .proto by hand, and quietly goes stale when a
+ * field is added -- print the struct as protobuf text format. The
+ * descriptors come from codegen (`PB_TF_DEFINE` per message in
+ * `<prefix>_interface.c`, declared in its header); `lifecycle_status_t_tf`
+ * is the shared zephlet.proto one, from `zephlet_textformat.h`.
+ *
+ * Output style is the library's own Kconfig choice; this app picks compact
+ * (see prj.conf), so a message prints on one line.
+ * `pb_tf_print_buf()` is preferred over
+ * `pb_tf_print()` with a character sink: it terminates the buffer even when
+ * a message prints nothing, and reports truncation as PB_TF_ERR_NO_SPACE
+ * rather than a flag to remember to check.
+ */
+static void print_proto(const char *label, const struct pb_tf_msg *tf, const void *msg)
+{
+	/* Static, not a local: main's stack is generous but the library's own
+	 * guidance is to keep the output buffer off it. Only ever called from
+	 * this thread, sequentially. */
+	static char text[192];
+	enum pb_tf_err err = pb_tf_print_buf(tf, msg, text, sizeof(text));
+
+	if (err != PB_TF_OK) {
+		printk("%s: cannot print: %s\n", label, pb_tf_strerror(err));
+		return;
+	}
+
+	/* Style is a compile-time choice, and the two need different framing:
+	 * multi-line already terminates its last field with a newline, while
+	 * compact emits one line and no terminator. The unused branch compiles
+	 * out. */
+	if (IS_ENABLED(CONFIG_NANOPB_TEXTFORMAT_PRINT_COMPACT)) {
+		printk("%s: %s\n", label, text);
+	} else {
+		printk("%s:\n%s", label, text);
+	}
+}
 
 /* ----- Instance storage + initial config ------------------------------ */
 
@@ -66,24 +109,22 @@ int main(void)
 
 	struct tick_config tick_config_now = {0};
 	if (tick_get_config(&tick_timer_based_impl, &tick_config_now, K_MSEC(500)) == 0) {
-		printk("Tick config: duration_ms=%u, period_ms=%u\n", tick_config_now.duration_ms,
-		       tick_config_now.period_ms);
+		print_proto("Tick config", &tick_config_t_tf, &tick_config_now);
 	}
 
 	struct tick_config tick_new = {.duration_ms = 3000, .period_ms = 1000};
 	if (tick_config(&tick_timer_based_impl, &tick_new, NULL, K_MSEC(500)) == 0) {
-		printk("Tick config updated, duration_ms=%u, period_ms=%u\n", tick_new.duration_ms,
-		       tick_new.period_ms);
+		print_proto("Tick config updated", &tick_config_t_tf, &tick_new);
 	}
 
 	struct lifecycle_status st = {0};
 
 	if (ui_start(&ui_fake_impl, &st, K_MSEC(500)) == 0) {
-		printk("UI is %srunning\n", st.is_running ? "" : "not ");
+		print_proto("UI status", &lifecycle_status_t_tf, &st);
 	}
 
 	if (tick_alt_start(&tick_timer_based_impl, &st, K_MSEC(500)) == 0) {
-		printk("Tick is %srunning\n", st.is_running ? "" : "not ");
+		print_proto("Tick status", &lifecycle_status_t_tf, &st);
 	}
 
 	k_sleep(K_SECONDS(10));
