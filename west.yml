@@ -19,7 +19,7 @@ manifest:
                   west-commands: scripts/west-commands.yml
                 - name: zephyr-nanopb-textformat
                   url: https://codeberg.org/rodrigopex/zephyr-nanopb-textformat
-                  revision: v0.1.0
+                  revision: v0.1.1
                   path: modules/lib/zephyr-nanopb-textformat
                 - name: zephyr
                   remote: zephyrproject-rtos

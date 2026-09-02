@@ -90,7 +90,35 @@ uart:~$ zlet typelab_bench config f_uint32: 1, f_bool: true   # any subset, in a
 
 Field names, not positions — so order is free and any subset works. Omitted fields read back as zero, because the parser zeroes the message before writing into it.
 
-`config`/`get_config` set or read every field in one call; the `set_X`/`get_X` pairs read/write the exact same underlying storage, one field at a time — either surface works, pick whichever is more convenient.
+`typelab_bench` has two benches. `Typelab.Config` carries one field per nanopb scalar type, reachable either through `config`/`get_config` (every field in one call) or through the `set_X`/`get_X` pairs (one field at a time, same underlying storage). `Typelab.Shapes`, via `set_shapes`/`get_shapes`, carries every *repetition rule* — none of which the shell could express before, because they did not merely fail at runtime, they failed to build:
+
+```
+uart:~$ zlet typelab_bench set_shapes opt_scalar: 0                       # optional: present, and zero
+uart:~$ zlet typelab_bench set_shapes rep_scalar: [9, 10]                 # repeated scalar
+uart:~$ zlet typelab_bench set_shapes sing_msg {a: 1, b: -2}              # submessage; the colon is optional
+uart:~$ zlet typelab_bench set_shapes opt_msg {a: 3, b: -4}               # optional submessage
+uart:~$ zlet typelab_bench set_shapes rep_msg: [{a: 5, b: 6}, {a: 7, b: 8}]   # repeated submessage
+uart:~$ zlet typelab_bench set_shapes deep {d2 {d3 {v: 42}}}              # three levels of nesting
+uart:~$ zlet typelab_bench set_shapes opt_string: "hi", rep_bytes: ["\xBB"]
+uart:~$ zlet typelab_bench get_shapes
+```
+
+A submessage prints as an indented block, and a repeated submessage as one block per element:
+
+```
+uart:~$ zlet typelab_bench set_shapes rep_msg: [{a: 5, b: 6}, {a: 7, b: 8}]
+plain_scalar: 0
+rep_msg {
+  a: 5
+  b: 6
+}
+rep_msg {
+  a: 7
+  b: 8
+}
+```
+
+An `optional` field prints only when set, which is what distinguishes it from a plain scalar: `opt_scalar: 0` prints, an omitted `opt_scalar` prints nothing, and `plain_scalar: 0` always prints because implicit presence has no way to say "absent".
 
 Errors carry a byte offset and, when a field was in scope, its name:
 
