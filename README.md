@@ -76,7 +76,7 @@ Reaching the CoAP server from the **host** (e.g. a libcoap `coap-client` on macO
 
 `CONFIG_ZEPHLETS_SHELL=y` (default in `prj.conf`) registers every zephlet instance under one `zlet` shell root command automatically — no app code needed beyond the `ZEPHLET_NEW(...)` call already in `main.c`. `typelab_bench` is the one instance built specifically to exercise it.
 
-An RPC takes its request as a protobuf **text-format** message, parsed by [zephyr-nanopb-textformat](https://codeberg.org/rodrigopex/zephyr-nanopb-textformat):
+An RPC takes its request as a protobuf **text-format** message, parsed by [zephyr-nanopb-textformat](https://github.com/rodrigopex/zephyr-nanopb-textformat):
 
 ```
 uart:~$ zlet <TAB>                          # tick_timer_based_impl / ui_fake_impl / tampering_emul_impl / typelab_bench
